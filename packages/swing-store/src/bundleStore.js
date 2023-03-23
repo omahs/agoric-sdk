@@ -13,11 +13,9 @@ import { buffer } from './util.js';
  * @typedef { { moduleFormat: 'getExport', source: string, sourceMap: string? } } GetExportBundle
  * @typedef { { moduleFormat: 'nestedEvaluate', source: string, sourceMap: string? } } NestedEvaluateBundle
  * @typedef { { moduleFormat: 'endoZipBase64', endoZipBase64: string, endoZipBase64Sha512: string } } EndoZipBase64Bundle
- * @typedef { EndoZipBase64Bundle | GetExportBundle | NestedEvaluateBundle } Bundle_proper
+ * @typedef { EndoZipBase64Bundle | GetExportBundle | NestedEvaluateBundle } Bundle
  */
 /**
- * @typedef { { moduleFormat: string, endoZipBase64: string, endoZipBase64Sha512: string } } Bundle
- *
  * @typedef { import('./swingStore').SwingStoreExporter } SwingStoreExporter
  *
  * @typedef {{
