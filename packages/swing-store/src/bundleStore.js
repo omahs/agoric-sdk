@@ -160,6 +160,34 @@ export function makeBundleStore(db, ensureTxn, noteExport = () => {}) {
       bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
         Fail`bundleID ${q(bundleID)} does not match bundle`;
       sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b9-')) {
+      // this works
+      if (bundle.moduleFormat !== 'endoZipBase64') {
+        throw Fail`unsupported module format ${q(bundle.moduleFormat)}`;
+      }
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b10-')) {
+      // this works
+      const { moduleFormat } = bundle;
+      if (moduleFormat !== 'endoZipBase64') {
+        throw Fail`unsupported module format ${q(bundle.moduleFormat)}`;
+      }
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b11-')) {
+      // this would completely fail, `|| throw` is invalid syntax
+      const { moduleFormat } = bundle;
+      //moduleFormat === 'endoZipBase64' ||
+      //  throw Fail`unsupported module format ${q(bundle.moduleFormat)}`;
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
     } else {
       Fail`unsupported BundleID ${bundleID}`;
     }
