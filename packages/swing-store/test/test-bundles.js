@@ -139,7 +139,8 @@ test('unknown format', t => {
   const { kernelStorage } = initSwingStore();
   const { bundleStore } = kernelStorage;
   const unknownID = 'b1999-whoa-futuristic';
-  t.throws(() => bundleStore.addBundle(unknownID, {}), {
+  /** @typedef {import('../src/bundleStore.js').Bundle} Bundle */
+  t.throws(() => bundleStore.addBundle(unknownID, /** @type {Bundle} */ ({})), {
     message: /unsupported BundleID/,
   });
 });
