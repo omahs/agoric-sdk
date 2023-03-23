@@ -83,10 +83,80 @@ export function makeBundleStore(db, ensureTxn, noteExport = () => {}) {
       bundleID === bundleIdFromHash(0, createSHA256(serialized).finish()) ||
         Fail`bundleID ${q(bundleID)} does not match bundle`;
       sqlAddBundle.run(bundleID, serialized);
+      // NOTE: the following b[123]- clauses are variants of the same
+      // intended behavior, to accept only a specific flavor of Bundle
+      // and then store the contents. The real code would only accept
+      // b1- and would reject the other prefixes (they are reserved
+      // for the future)
     } else if (bundleID.startsWith('b1-')) {
+      // this fails tsc because endoZipBase64/etc are not known to be
+      // readable, because 'bundle' is not yet narrowed to the endo
+      // flavor
       const { moduleFormat, endoZipBase64, endoZipBase64Sha512 } = bundle;
       moduleFormat === 'endoZipBase64' ||
         Fail`unsupported module format ${q(moduleFormat)}`;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b2-')) {
+      // this fails in the same way, apparently assert.equal does not provide a constraint
+      assert.equal(bundle.moduleFormat, 'endoZipBase64');
+      const { moduleFormat, endoZipBase64, endoZipBase64Sha512 } = bundle;
+      moduleFormat === 'endoZipBase64' ||
+        Fail`unsupported module format ${q(moduleFormat)}`;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b3-')) {
+      // this passes: apparently plain assert() *does* provide a constraint
+      assert(bundle.moduleFormat === 'endoZipBase64');
+      const { moduleFormat, endoZipBase64, endoZipBase64Sha512 } = bundle;
+      moduleFormat === 'endoZipBase64' ||
+        Fail`unsupported module format ${q(moduleFormat)}`;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b4-')) {
+      // this passes
+      const { moduleFormat } = bundle;
+      assert(moduleFormat === 'endoZipBase64');
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      moduleFormat === 'endoZipBase64' ||
+        Fail`unsupported module format ${q(moduleFormat)}`;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b5-')) {
+      // this fails: I think tsc doesn't realize Fail is terminal
+      bundle.moduleFormat === 'endoZipBase64' ||
+        Fail`unsupported module format ${q(bundle.moduleFormat)}`;
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b6-')) {
+      // this fails: I think tsc doesn't realize assert.fail is terminal
+      bundle.moduleFormat === 'endoZipBase64' ||
+        assert.fail(`unsupported module format ${q(bundle.moduleFormat)}`);
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b7-')) {
+      // this passes
+      if (bundle.moduleFormat !== 'endoZipBase64') {
+        assert.fail(`unsupported module format ${q(bundle.moduleFormat)}`);
+      }
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
+      bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
+        Fail`bundleID ${q(bundleID)} does not match bundle`;
+      sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
+    } else if (bundleID.startsWith('b8-')) {
+      // this fails
+      if (bundle.moduleFormat !== 'endoZipBase64') {
+        Fail`unsupported module format ${q(bundle.moduleFormat)}`;
+      }
+      const { endoZipBase64, endoZipBase64Sha512 } = bundle;
       bundleID === bundleIdFromHash(1, endoZipBase64Sha512) ||
         Fail`bundleID ${q(bundleID)} does not match bundle`;
       sqlAddBundle.run(bundleID, decodeBase64(endoZipBase64));
