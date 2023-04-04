@@ -1343,6 +1343,8 @@ function build(
   });
 
   const testHooks = harden({
+    valToSlot,
+    slotToVal,
     ...vom.testHooks,
     ...vrm.testHooks,
     ...collectionManager.testHooks,
