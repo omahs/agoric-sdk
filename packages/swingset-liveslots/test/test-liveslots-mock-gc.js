@@ -6,7 +6,12 @@ import { makeLiveSlots } from '../src/liveslots.js';
 import { parseVatSlot } from '../src/parseVatSlots.js';
 import { kslot, kser } from './kmarshal.js';
 import { buildSyscall } from './liveslots-helpers.js';
-import { makeMessage, makeStartVat, makeBringOutYourDead } from './util.js';
+import {
+  makeMessage,
+  makeStartVat,
+  makeBringOutYourDead,
+  makeRetireImports,
+} from './util.js';
 import { makeMockGC } from './mock-gc.js';
 
 test('dropImports', async t => {
@@ -480,6 +485,19 @@ test('retirement', async t => {
   // no-longer-recognizable key
   await dispatch(makeBringOutYourDead());
   const retires = log.filter(e => e.type === 'retireImports');
+
   console.log(retires);
   t.deepEqual(retires, [{ type: 'retireImports', slots: [presenceBvref] }]);
+
+  // If the bug is present, the vat won't send `syscall.retireImports`
+  // to the kernel. In a full system, that means the kernel can
+  // eventually send a `dispatch.retireImports` into the vat, if/when
+  // the object's hosting vat decides to drop it. Make sure that won't
+  // cause a crash.
+
+  if (!retires.length) {
+    console.log(`testing kernel's dispatch.retireImports`);
+    await dispatch(makeRetireImports(presenceBvref));
+    console.log(`dispatch.retireImports did not crash`);
+  }
 });
