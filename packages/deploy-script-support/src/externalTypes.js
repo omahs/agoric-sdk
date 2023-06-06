@@ -16,14 +16,9 @@ export {};
  */
 
 /**
- * @typedef BundleHandle
- * @property {string} [bundleName]
- */
-
-/**
  * @callback PublishBundleRef
- * @param {ERef<BundleHandle>} bundle
- * @returns {Promise<BundleHandle>}
+ * @param {ERef<VatSourceRef>} bundle
+ * @returns {Promise<VatSourceRef>}
  */
 
 /**
@@ -31,7 +26,7 @@ export {};
  * @param {string} srcSpec
  * @param {string} bundlePath
  * @param {any} [opts]
- * @returns {BundleHandle}
+ * @returns {ERef<VatSourceRef>}
  */
 
 /**

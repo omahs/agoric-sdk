@@ -138,7 +138,6 @@ export const makeHelpers = async (homePromise, endowments) => {
     get writeCoreProposal() {
       return makeWriteCoreProposal(homePromise, endowments, {
         getBundleSpec: deps.cacheAndGetBundleSpec,
-        getBundlerMaker: helpers.getBundlerMaker,
       });
     },
   });
