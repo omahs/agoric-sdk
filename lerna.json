@@ -1,4 +1,5 @@
 {
+  "useNX": false,
   "command": {
     "version": {
       "message": "chore(release): publish",
