@@ -528,3 +528,13 @@ test('bad option.name', async t => {
     message: /cannot start with hyphen/,
   });
 });
+
+test('dynamic import', async t => {
+  const opts = options(io);
+  const vat = await xsnap(opts);
+  await vat.evaluate(
+    `import('test/import-fixture.js')`
+  );
+  await vat.close();
+  t.deepEqual(['Imported temp.js'], opts.messages);
+});
