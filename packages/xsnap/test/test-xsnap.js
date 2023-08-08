@@ -535,6 +535,6 @@ test('dynamic import', async t => {
   await vat.evaluate(
     `import('test/import-fixture.js')`
   );
-  await vat.close();
-  t.deepEqual(['Imported temp.js'], opts.messages);
+  await t.throwsAsync(() => vat.close());
+  t.deepEqual([], opts.messages);
 });
