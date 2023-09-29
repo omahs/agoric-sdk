@@ -351,6 +351,7 @@ export async function makeSwingsetController(
 
     debug: {
       addDeviceHook: kernel.addDeviceHook,
+      ensureVatOnline: kernel.ensureVatOnline,
     },
 
     pinVatRoot(vatName) {

@@ -1957,6 +1957,7 @@ export default function buildKernel(
     // the rest are for testing and debugging
 
     createTestVat,
+    ensureVatOnline: vatID => vatWarehouse.ensureVatOnline(vatID, true),
 
     log(str) {
       ephemeral.log.push(`${str}`);
