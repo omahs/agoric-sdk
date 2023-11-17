@@ -837,6 +837,7 @@ export async function launch({
         }
 
         // Now queue the code for evaluation.
+        /** @type {import('./types').CoreEvalAction} */
         const coreEvalAction = {
           type: ActionType.CORE_EVAL,
           blockHeight,
