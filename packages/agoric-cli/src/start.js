@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/no-floating-promises: "warn" */
-/* global process setTimeout */
+/* eslint-env node */
 import chalk from 'chalk';
 import { createHash } from 'crypto';
 import path from 'path';

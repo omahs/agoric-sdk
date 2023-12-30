@@ -62,7 +62,6 @@ export const main = async (argv, { readFile, stdout }) => {
 };
 
 if (isEntrypoint(import.meta.url)) {
-  /* global process */
   void farExports.E.when(
     import('fs/promises'),
     fsp =>
