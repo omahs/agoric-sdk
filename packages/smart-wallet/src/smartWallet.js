@@ -1187,5 +1187,4 @@ export const prepareSmartWallet = (baggage, shared) => {
   return makeSmartWallet;
 };
 harden(prepareSmartWallet);
-
-/** @typedef {Awaited<ReturnType<ReturnType<typeof prepareSmartWallet>>>} SmartWallet */
+/** @typedef {import('@agoric/internal').ExoObj<typeof prepareSmartWallet>} SmartWallet */
