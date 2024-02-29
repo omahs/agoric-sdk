@@ -510,7 +510,7 @@ const prepareVaultDirector = (
   return makeVaultDirector;
 };
 harden(prepareVaultDirector);
-/** @typedef {import('@agoric/internal').ExoObj<typeof prepareVaultDirector>} VaultDirector */
+/** @typedef {ExoObj<typeof prepareVaultDirector>} VaultDirector */
 
 /**
  * Prepare the VaultDirector kind, get or make the singleton

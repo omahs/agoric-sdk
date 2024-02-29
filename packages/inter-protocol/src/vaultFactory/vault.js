@@ -867,4 +867,4 @@ export const prepareVault = (baggage, makeRecorderKit, zcf) => {
   return maker;
 };
 
-/** @typedef {import('@agoric/internal').ExoObj<typeof prepareVault>['self']} Vault */
+/** @typedef {ExoObj<typeof prepareVault>['self']} Vault */

@@ -1187,4 +1187,4 @@ export const prepareSmartWallet = (baggage, shared) => {
   return makeSmartWallet;
 };
 harden(prepareSmartWallet);
-/** @typedef {import('@agoric/internal').ExoObj<typeof prepareSmartWallet>} SmartWallet */
+/** @typedef {ExoObj<typeof prepareSmartWallet>} SmartWallet */

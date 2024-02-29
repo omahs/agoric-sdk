@@ -29,4 +29,4 @@ export const prepareVowTools = (zone, powers = {}) => {
   return harden({ when, watch, makeVowKit });
 };
 harden(prepareVowTools);
-/** @type {import('@agoric/internal').ExoObj<typeof prepareVowTools>} VowTools */
+/** @type {ExoObj<typeof prepareVowTools>} VowTools */

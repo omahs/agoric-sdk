@@ -55,11 +55,7 @@ const prepareLocalChainAccount = zone =>
       },
     },
   );
-/**
- * @typedef {import('@agoric/internal').ExoObj<
- *   typeof prepareLocalChainAccount
- * >} LocalChainAccount
- */
+/** @typedef {ExoObj<typeof prepareLocalChainAccount>} LocalChainAccount */
 
 export const LocalChainI = M.interface('LocalChain', {
   createAccount: M.callWhen().returns(M.remotable('LocalChainAccount')),
@@ -97,7 +93,7 @@ const prepareLocalChain = (zone, createAccount) =>
       },
     },
   );
-/** @typedef {import('@agoric/internal').ExoObj<typeof prepareLocalChain>} LocalChain */
+/** @typedef {ExoObj<typeof prepareLocalChain>} LocalChain */
 
 /** @param {import('@agoric/base-zone').Zone} zone */
 export const prepareLocalChainTools = zone => {

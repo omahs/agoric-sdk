@@ -374,8 +374,4 @@ export const prepareFluxAggregatorKit = async (
   return makeFluxAggregatorKit;
 };
 harden(prepareFluxAggregatorKit);
-/**
- * @typedef {import('@agoric/internal').ExoObj<
- *   typeof prepareFluxAggregatorKit
- * >} FluxAggregatorKit
- */
+/** @typedef {ExoObj<typeof prepareFluxAggregatorKit>} FluxAggregatorKit */

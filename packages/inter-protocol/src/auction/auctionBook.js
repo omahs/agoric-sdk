@@ -789,4 +789,4 @@ export const prepareAuctionBook = (baggage, zcf, makeRecorderKit) => {
 };
 harden(prepareAuctionBook);
 
-/** @typedef {import('@agoric/internal').ExoObj<typeof prepareAuctionBook>} AuctionBook */
+/** @typedef {ExoObj<typeof prepareAuctionBook>} AuctionBook */
