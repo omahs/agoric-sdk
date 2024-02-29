@@ -20,5 +20,8 @@ export declare class SyncCallback<
 }
 
 declare global {
+  /**
+   * Utility for the type of an Exo object once prepared and instantiated.
+   */
   type ExoObj<T> = Awaited<ReturnType<Awaited<ReturnType<T>>>>;
 }
