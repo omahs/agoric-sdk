@@ -286,4 +286,4 @@ export const prepareAssetReserveKit = async (
   return makeAssetReserveKit;
 };
 harden(prepareAssetReserveKit);
-/** @typedef {import('@agoric/internal').ExoObjtypeof prepareAssetReserveKit>>>} AssetReserveKit */
+/** @typedef {import('@agoric/internal').ExoObj<typeof prepareAssetReserveKit>} AssetReserveKit */
