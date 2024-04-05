@@ -1,14 +1,10 @@
 // @ts-check
 /* global globalThis */
-import anyTest from 'ava';
-import {
-  createProtobufRpcClient,
-  QueryClient,
-  setupBankExtension,
-} from '@cosmjs/stargate';
+import { QueryClient, setupBankExtension } from '@cosmjs/stargate';
 import { Tendermint34Client } from '@cosmjs/tendermint-rpc';
-// import { QueryClientImpl } from '@agoric/cosmic-proto/vstorage/query.js';
+import anyTest from 'ava';
 
+import { agoric } from '@agoric/cosmic-proto';
 import { makeHttpClient } from '../src/makeHttpClient.js';
 import { captureIO, replayIO, web1, web2 } from './net-access-fixture.js';
 
@@ -73,7 +69,7 @@ const scenario2 = {
   ],
 };
 
-test.failing(`vstorage query: Children (RECORDING: ${RECORDING})`, async t => {
+test(`vstorage query: Children (RECORDING: ${RECORDING})`, async t => {
   const { context: io } = t;
 
   const { fetch: fetchMock, web } = io.recording
@@ -81,14 +77,13 @@ test.failing(`vstorage query: Children (RECORDING: ${RECORDING})`, async t => {
     : { fetch: replayIO(web2), web: new Map() };
   const rpcClient = makeHttpClient(scenario2.endpoint, fetchMock);
 
+  t.is(agoric.vstorage.Children.typeUrl, '/agoric.vstorage.Children');
+
   const tmClient = await Tendermint34Client.create(rpcClient);
   const qClient = new QueryClient(tmClient);
-  const rpc = createProtobufRpcClient(qClient);
-  // @ts-expect-error -- XXX
-  // eslint-disable-next-line no-undef -- XXX
-  const queryService = new QueryClientImpl(rpc);
+  const queryService = agoric.vstorage.createRpcQueryExtension(qClient);
 
-  const children = await queryService.Children({ path: '' });
+  const children = await queryService.children({ path: '' });
   if (io.recording) {
     t.snapshot(web);
   }
