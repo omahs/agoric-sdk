@@ -1,5 +1,12 @@
 //@ts-nocheck
-import { Params, ParamsSDKType, State, StateSDKType } from './vbank.js';
+import {
+  Params,
+  ParamsAmino,
+  ParamsSDKType,
+  State,
+  StateAmino,
+  StateSDKType,
+} from './vbank.js';
 import { BinaryReader, BinaryWriter } from '../../binary.js';
 import { isSet } from '../../helpers.js';
 /** QueryParamsRequest is the request type for the Query/Params RPC method. */
@@ -7,6 +14,12 @@ export interface QueryParamsRequest {}
 export interface QueryParamsRequestProtoMsg {
   typeUrl: '/agoric.vbank.QueryParamsRequest';
   value: Uint8Array;
+}
+/** QueryParamsRequest is the request type for the Query/Params RPC method. */
+export interface QueryParamsRequestAmino {}
+export interface QueryParamsRequestAminoMsg {
+  type: '/agoric.vbank.QueryParamsRequest';
+  value: QueryParamsRequestAmino;
 }
 /** QueryParamsRequest is the request type for the Query/Params RPC method. */
 export interface QueryParamsRequestSDKType {}
@@ -20,6 +33,15 @@ export interface QueryParamsResponseProtoMsg {
   value: Uint8Array;
 }
 /** QueryParamsResponse is the response type for the Query/Params RPC method. */
+export interface QueryParamsResponseAmino {
+  /** params defines the parameters of the module. */
+  params?: ParamsAmino;
+}
+export interface QueryParamsResponseAminoMsg {
+  type: '/agoric.vbank.QueryParamsResponse';
+  value: QueryParamsResponseAmino;
+}
+/** QueryParamsResponse is the response type for the Query/Params RPC method. */
 export interface QueryParamsResponseSDKType {
   params: ParamsSDKType;
 }
@@ -28,6 +50,12 @@ export interface QueryStateRequest {}
 export interface QueryStateRequestProtoMsg {
   typeUrl: '/agoric.vbank.QueryStateRequest';
   value: Uint8Array;
+}
+/** QueryStateRequest is the request type for the Query/State RPC method. */
+export interface QueryStateRequestAmino {}
+export interface QueryStateRequestAminoMsg {
+  type: '/agoric.vbank.QueryStateRequest';
+  value: QueryStateRequestAmino;
 }
 /** QueryStateRequest is the request type for the Query/State RPC method. */
 export interface QueryStateRequestSDKType {}
@@ -39,6 +67,15 @@ export interface QueryStateResponse {
 export interface QueryStateResponseProtoMsg {
   typeUrl: '/agoric.vbank.QueryStateResponse';
   value: Uint8Array;
+}
+/** QueryStateResponse is the response type for the Query/State RPC method. */
+export interface QueryStateResponseAmino {
+  /** state defines the parameters of the module. */
+  state?: StateAmino;
+}
+export interface QueryStateResponseAminoMsg {
+  type: '/agoric.vbank.QueryStateResponse';
+  value: QueryStateResponseAmino;
 }
 /** QueryStateResponse is the response type for the Query/State RPC method. */
 export interface QueryStateResponseSDKType {
@@ -83,6 +120,17 @@ export const QueryParamsRequest = {
   fromPartial(_: Partial<QueryParamsRequest>): QueryParamsRequest {
     const message = createBaseQueryParamsRequest();
     return message;
+  },
+  fromAmino(_: QueryParamsRequestAmino): QueryParamsRequest {
+    const message = createBaseQueryParamsRequest();
+    return message;
+  },
+  toAmino(_: QueryParamsRequest): QueryParamsRequestAmino {
+    const obj: any = {};
+    return obj;
+  },
+  fromAminoMsg(object: QueryParamsRequestAminoMsg): QueryParamsRequest {
+    return QueryParamsRequest.fromAmino(object.value);
   },
   fromProtoMsg(message: QueryParamsRequestProtoMsg): QueryParamsRequest {
     return QueryParamsRequest.decode(message.value);
@@ -153,6 +201,21 @@ export const QueryParamsResponse = {
         : undefined;
     return message;
   },
+  fromAmino(object: QueryParamsResponseAmino): QueryParamsResponse {
+    const message = createBaseQueryParamsResponse();
+    if (object.params !== undefined && object.params !== null) {
+      message.params = Params.fromAmino(object.params);
+    }
+    return message;
+  },
+  toAmino(message: QueryParamsResponse): QueryParamsResponseAmino {
+    const obj: any = {};
+    obj.params = message.params ? Params.toAmino(message.params) : undefined;
+    return obj;
+  },
+  fromAminoMsg(object: QueryParamsResponseAminoMsg): QueryParamsResponse {
+    return QueryParamsResponse.fromAmino(object.value);
+  },
   fromProtoMsg(message: QueryParamsResponseProtoMsg): QueryParamsResponse {
     return QueryParamsResponse.decode(message.value);
   },
@@ -202,6 +265,17 @@ export const QueryStateRequest = {
   fromPartial(_: Partial<QueryStateRequest>): QueryStateRequest {
     const message = createBaseQueryStateRequest();
     return message;
+  },
+  fromAmino(_: QueryStateRequestAmino): QueryStateRequest {
+    const message = createBaseQueryStateRequest();
+    return message;
+  },
+  toAmino(_: QueryStateRequest): QueryStateRequestAmino {
+    const obj: any = {};
+    return obj;
+  },
+  fromAminoMsg(object: QueryStateRequestAminoMsg): QueryStateRequest {
+    return QueryStateRequest.fromAmino(object.value);
   },
   fromProtoMsg(message: QueryStateRequestProtoMsg): QueryStateRequest {
     return QueryStateRequest.decode(message.value);
@@ -271,6 +345,21 @@ export const QueryStateResponse = {
         ? State.fromPartial(object.state)
         : undefined;
     return message;
+  },
+  fromAmino(object: QueryStateResponseAmino): QueryStateResponse {
+    const message = createBaseQueryStateResponse();
+    if (object.state !== undefined && object.state !== null) {
+      message.state = State.fromAmino(object.state);
+    }
+    return message;
+  },
+  toAmino(message: QueryStateResponse): QueryStateResponseAmino {
+    const obj: any = {};
+    obj.state = message.state ? State.toAmino(message.state) : undefined;
+    return obj;
+  },
+  fromAminoMsg(object: QueryStateResponseAminoMsg): QueryStateResponse {
+    return QueryStateResponse.fromAmino(object.value);
   },
   fromProtoMsg(message: QueryStateResponseProtoMsg): QueryStateResponse {
     return QueryStateResponse.decode(message.value);

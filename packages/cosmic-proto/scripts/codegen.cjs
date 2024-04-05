@@ -86,13 +86,13 @@ telescope({
     },
     aminoEncoding: {
       // Necessary for getSigningAgoricClient
-      enabled: false,
+      enabled: true,
     },
     lcdClients: {
       enabled: false,
     },
     rpcClients: {
-      enabled: false,
+      enabled: true,
     },
   },
 })
