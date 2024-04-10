@@ -62,6 +62,7 @@ export type AssetKindForValue<V extends AmountValue> = V extends bigint
       : V extends import('@endo/patterns').CopyBag<any>
         ? 'copyBag'
         : never;
+/** @deprecated */
 export type DisplayInfo<K extends AssetKind = AssetKind> = {
   /**
    * Tells the display software how many decimal places to move the decimal over
@@ -95,7 +96,7 @@ export type Brand<K extends AssetKind = AssetKind> = {
   /** Should be used with `issuer.getBrand` to ensure an issuer and brand match. */
   isMyIssuer: (allegedIssuer: ERef<Issuer<AssetKind>>) => Promise<boolean>;
   getAllegedName: () => string;
-  /** Give information to UI on how to display the amount. */
+  /** @deprecated look up in boardAux */
   getDisplayInfo: () => DisplayInfo<K>;
   getAmountShape: () => Pattern;
 };
@@ -155,7 +156,7 @@ export type Issuer<K extends AssetKind = AssetKind> = {
   getAllegedName: () => string;
   /** Get the kind of MathHelpers used by this Issuer. */
   getAssetKind: () => AssetKind;
-  /** Give information to UI on how to display amounts for this issuer. */
+  /** @deprecated look up in boardAux */
   getDisplayInfo: () => DisplayInfo<K>;
   /** Make an empty purse of this brand. */
   makeEmptyPurse: () => Purse<K>;
