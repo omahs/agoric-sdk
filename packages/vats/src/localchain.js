@@ -1,7 +1,12 @@
 // @ts-check
 import { E } from '@endo/far';
 import { M } from '@endo/patterns';
-import { AmountShape, BrandShape, PaymentShape } from '@agoric/ertp';
+import {
+  AmountPatternShape,
+  AmountShape,
+  BrandShape,
+  PaymentShape,
+} from '@agoric/ertp';
 
 const { Fail } = assert;
 
@@ -28,7 +33,9 @@ const { Fail } = assert;
 export const LocalChainAccountI = M.interface('LocalChainAccount', {
   getAddress: M.callWhen().returns(M.string()),
   getBalance: M.callWhen(BrandShape).returns(AmountShape),
-  deposit: M.callWhen(PaymentShape).optional(M.pattern()).returns(AmountShape),
+  deposit: M.callWhen(PaymentShape)
+    .optional(AmountPatternShape)
+    .returns(AmountShape),
   withdraw: M.callWhen(AmountShape).returns(PaymentShape),
   executeTx: M.callWhen(M.arrayOf(M.record())).returns(M.arrayOf(M.record())),
 });
