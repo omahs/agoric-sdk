@@ -1,4 +1,9 @@
 /** @file Use-object for the owner of a staking account */
+import { toRequestQueryJson } from '@agoric/cosmic-proto';
+import {
+  QueryBalanceRequest,
+  QueryBalanceResponse,
+} from '@agoric/cosmic-proto/cosmos/bank/v1beta1/query.js';
 import {
   MsgWithdrawDelegatorReward,
   MsgWithdrawDelegatorRewardResponse,
@@ -10,19 +15,14 @@ import {
   MsgUndelegate,
   MsgUndelegateResponse,
 } from '@agoric/cosmic-proto/cosmos/staking/v1beta1/tx.js';
-import {
-  QueryBalanceRequest,
-  QueryBalanceResponse,
-} from '@agoric/cosmic-proto/cosmos/bank/v1beta1/query.js';
 import { Any } from '@agoric/cosmic-proto/google/protobuf/any.js';
 import { AmountShape } from '@agoric/ertp';
 import { makeTracer } from '@agoric/internal';
-import { M, prepareExoClassKit } from '@agoric/vat-data';
+import { M } from '@agoric/vat-data';
 import { TopicsRecordShape } from '@agoric/zoe/src/contractSupport/index.js';
 import { InvitationShape } from '@agoric/zoe/src/typeGuards.js';
-import { decodeBase64, encodeBase64 } from '@endo/base64';
+import { decodeBase64 } from '@endo/base64';
 import { E } from '@endo/far';
-import { toRequestQueryJson } from '@agoric/cosmic-proto';
 import {
   AmountArgShape,
   ChainAddressShape,
@@ -30,18 +30,20 @@ import {
   CoinShape,
   DelegationShape,
 } from '../typeGuards.js';
-
-/** maximum clock skew, in seconds, for unbonding time reported from other chain */
-export const maxClockSkew = 10n * 60n;
+import {
+  encodeTxResponse,
+  maxClockSkew,
+  tryDecodeResponse,
+} from '../utils/cosmos.js';
+import { dateInSeconds } from '../utils/time.js';
 
 /**
- * @import {AmountArg, IcaAccount, ChainAddress, ChainAmount, CosmosValidatorAddress, ICQConnection, StakingAccountActions, DenomAmount} from '../types.js';
+ * @import {AmountArg, IcaAccount, ChainAddress, CosmosValidatorAddress, ICQConnection, StakingAccountActions, DenomAmount} from '../types.js';
  * @import {RecorderKit, MakeRecorderKit} from '@agoric/zoe/src/contractSupport/recorder.js';
- * @import {Baggage} from '@agoric/swingset-liveslots';
- * @import {AnyJson} from '@agoric/cosmic-proto';
- * @import { Coin } from '@agoric/cosmic-proto/cosmos/base/v1beta1/coin.js';
- * @import { Delegation } from '@agoric/cosmic-proto/cosmos/staking/v1beta1/staking.js';
+ * @import {Coin} from '@agoric/cosmic-proto/cosmos/base/v1beta1/coin.js';
+ * @import {Delegation} from '@agoric/cosmic-proto/cosmos/staking/v1beta1/staking.js';
  * @import {TimerService} from '@agoric/time';
+ * @import {Zone} from '@agoric/zone';
  */
 
 const trace = makeTracer('StakingAccountHolder');
@@ -85,21 +87,6 @@ const PUBLIC_TOPICS = {
   account: ['Staking Account holder status', M.any()],
 };
 
-// UNTIL https://github.com/cosmology-tech/telescope/issues/605
-/**
- * @param {Any} x
- * @returns {AnyJson}
- */
-const toAnyJSON = x => /** @type {AnyJson} */ (Any.toJSON(x));
-
-export const encodeTxResponse = (response, toProtoMsg) => {
-  const protoMsg = toProtoMsg(response);
-  const any1 = Any.fromPartial(protoMsg);
-  const any2 = Any.fromPartial({ value: Any.encode(any1).finish() });
-  const ackStr = encodeBase64(Any.encode(any2).finish());
-  return ackStr;
-};
-
 export const trivialDelegateResponse = encodeTxResponse(
   {},
   MsgDelegateResponse.toProtoMsg,
@@ -111,34 +98,16 @@ const expect = (actual, expected, message) => {
   }
 };
 
-/**
- * @template T
- * @param {string} ackStr
- * @param {(p: {typeUrl: string, value: Uint8Array}) => T} fromProtoMsg
- */
-export const tryDecodeResponse = (ackStr, fromProtoMsg) => {
-  try {
-    const any = Any.decode(decodeBase64(ackStr));
-    const protoMsg = Any.decode(any.value);
-
-    const msg = fromProtoMsg(protoMsg);
-    return msg;
-  } catch (cause) {
-    throw assert.error(`bad response: ${ackStr}`, undefined, { cause });
-  }
-};
-
 /** @type {(c: { denom: string, amount: string }) => DenomAmount} */
 const toDenomAmount = c => ({ denom: c.denom, value: BigInt(c.amount) });
 
 /**
- * @param {Baggage} baggage
+ * @param {Zone} zone
  * @param {MakeRecorderKit} makeRecorderKit
  * @param {ZCF} zcf
  */
-export const prepareStakingAccountKit = (baggage, makeRecorderKit, zcf) => {
-  const makeStakingAccountKit = prepareExoClassKit(
-    baggage,
+export const prepareStakingAccountKit = (zone, makeRecorderKit, zcf) => {
+  const makeStakingAccountKit = zone.exoClassKit(
     'Staking Account Holder',
     {
       helper: M.interface('helper', {
@@ -304,7 +273,7 @@ export const prepareStakingAccountKit = (baggage, makeRecorderKit, zcf) => {
           const { chainAddress } = this.state;
 
           const result = await E(helper.owned()).executeEncodedTx([
-            toAnyJSON(
+            Any.toJSON(
               MsgDelegate.toProtoMsg({
                 delegatorAddress: chainAddress.address,
                 validatorAddress: validator.address,
@@ -328,7 +297,7 @@ export const prepareStakingAccountKit = (baggage, makeRecorderKit, zcf) => {
 
           // NOTE: response, including completionTime, is currently discarded.
           await E(helper.owned()).executeEncodedTx([
-            toAnyJSON(
+            Any.toJSON(
               MsgBeginRedelegate.toProtoMsg({
                 delegatorAddress: chainAddress.address,
                 validatorSrcAddress: srcValidator.address,
@@ -352,7 +321,7 @@ export const prepareStakingAccountKit = (baggage, makeRecorderKit, zcf) => {
             validatorAddress: validator.address,
           });
           const account = helper.owned();
-          const result = await E(account).executeEncodedTx([toAnyJSON(msg)]);
+          const result = await E(account).executeEncodedTx([Any.toJSON(msg)]);
           const response = tryDecodeResponse(
             result,
             MsgWithdrawDelegatorRewardResponse.fromProtoMsg,
@@ -400,7 +369,7 @@ export const prepareStakingAccountKit = (baggage, makeRecorderKit, zcf) => {
 
           const result = await E(helper.owned()).executeEncodedTx(
             delegations.map(d =>
-              toAnyJSON(
+              Any.toJSON(
                 MsgUndelegate.toProtoMsg({
                   delegatorAddress: chainAddress.address,
                   validatorAddress: d.validatorAddress,
@@ -416,9 +385,8 @@ export const prepareStakingAccountKit = (baggage, makeRecorderKit, zcf) => {
           );
           trace('undelegate response', response);
           const { completionTime } = response;
-          const endTime = BigInt(completionTime.getTime() / 1000);
 
-          await E(timer).wakeAt(endTime + maxClockSkew);
+          await E(timer).wakeAt(dateInSeconds(completionTime) + maxClockSkew);
         },
       },
     },

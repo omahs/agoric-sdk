@@ -48,7 +48,7 @@ export const start = async (zcf, privateArgs, baggage) => {
   const agoricChainInfo = prepareMockChainInfo(zone);
 
   const makeLocalChainAccountKit = prepareLocalChainAccountKit(
-    baggage,
+    zone,
     makeRecorderKit,
     zcf,
     privateArgs.timerService,
@@ -59,6 +59,7 @@ export const start = async (zcf, privateArgs, baggage) => {
   async function makeLocalAccountKit() {
     const account = await E(privateArgs.localchain).makeAccount();
     const address = await E(account).getAddress();
+    // XXX 'address' is implied by 'account'; use an async maker that get the value itself
     return makeLocalChainAccountKit({
       account,
       address,
@@ -70,10 +71,13 @@ export const start = async (zcf, privateArgs, baggage) => {
     'StakeBld',
     M.interface('StakeBldI', {
       makeAccount: M.callWhen().returns(M.remotable('LocalChainAccountHolder')),
-      makeAcountInvitationMaker: M.callWhen().returns(InvitationShape),
+      makeAccountInvitationMaker: M.callWhen().returns(InvitationShape),
       makeStakeBldInvitation: M.callWhen().returns(InvitationShape),
     }),
     {
+      /**
+       * Invitation to make an account, initialized with the give's BLD
+       */
       makeStakeBldInvitation() {
         return zcf.makeInvitation(
           async seat => {
@@ -103,7 +107,10 @@ export const start = async (zcf, privateArgs, baggage) => {
         const { holder } = await makeLocalAccountKit();
         return holder;
       },
-      makeAcountInvitationMaker() {
+      /**
+       * Invitation to make an account, without any funds
+       */
+      makeAccountInvitationMaker() {
         trace('makeCreateAccountInvitation');
         return zcf.makeInvitation(async seat => {
           seat.exit();

@@ -11,7 +11,7 @@ import {
 const { Fail } = assert;
 
 /**
- * @import {TypedJson, ResponseTo} from '@agoric/cosmic-proto';
+ * @import {TypedJson, ResponseTo, JsonSafe} from '@agoric/cosmic-proto';
  * @import {BankManager, Bank} from './vat-bank.js';
  * @import {ScopedBridgeManager} from './types.js';
  */
@@ -96,7 +96,7 @@ const prepareLocalChainAccount = zone =>
        * @template {TypedJson[]} MT messages tuple (use const with multiple
        *   elements or it will be a mixed array)
        * @param {MT} messages
-       * @returns {Promise<{ [K in keyof MT]: ResponseTo<MT[K]> }>}
+       * @returns {Promise<{ [K in keyof MT]: JsonSafe<ResponseTo<MT[K]>> }>}
        */
       async executeTx(messages) {
         const { address, system } = this.state;

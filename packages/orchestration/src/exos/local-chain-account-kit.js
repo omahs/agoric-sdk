@@ -3,24 +3,24 @@ import { NonNullish } from '@agoric/assert';
 import { typedJson } from '@agoric/cosmic-proto/vatsafe';
 import { AmountShape, PaymentShape } from '@agoric/ertp';
 import { makeTracer } from '@agoric/internal';
-import { UnguardedHelperI } from '@agoric/internal/src/typeGuards.js';
-import { M, prepareExoClassKit } from '@agoric/vat-data';
+import { M } from '@agoric/vat-data';
 import { TopicsRecordShape } from '@agoric/zoe/src/contractSupport/index.js';
+import { InvitationShape } from '@agoric/zoe/src/typeGuards.js';
 import { E } from '@endo/far';
 import {
   AmountArgShape,
   ChainAddressShape,
   IBCTransferOptionsShape,
 } from '../typeGuards.js';
-import { makeTimestampHelper } from '../utils/time.js';
+import { maxClockSkew } from '../utils/cosmos.js';
+import { dateInSeconds, makeTimestampHelper } from '../utils/time.js';
 
 /**
  * @import {LocalChainAccount} from '@agoric/vats/src/localchain.js';
  * @import {AmountArg, ChainAddress, DenomAmount, IBCMsgTransferOptions, CosmosChainInfo} from '@agoric/orchestration';
  * @import {RecorderKit, MakeRecorderKit} from '@agoric/zoe/src/contractSupport/recorder.js'.
- * @import {Baggage} from '@agoric/vat-data';
+ * @import {Zone} from '@agoric/zone';
  * @import {TimerService, TimerBrand} from '@agoric/time';
- * @import {TimestampHelper} from '../utils/time.js';
  */
 
 // partial until #8879
@@ -37,22 +37,22 @@ const { Fail } = assert;
 /**
  * @typedef {{
  *   topicKit: RecorderKit<LocalChainAccountNotification>;
- *   account: LocalChainAccount | null;
+ *   account: LocalChainAccount;
  *   address: ChainAddress['address'];
  * }} State
  */
 
 const HolderI = M.interface('holder', {
   getPublicTopics: M.call().returns(TopicsRecordShape),
-  makeDelegateInvitation: M.call(M.string(), AmountShape).returns(M.promise()),
-  makeCloseAccountInvitation: M.call().returns(M.promise()),
-  makeTransferAccountInvitation: M.call().returns(M.promise()),
+  delegate: M.call(M.string(), AmountShape).returns(M.promise()),
+  undelegate: M.call(M.string(), AmountShape).returns(M.promise()),
   deposit: M.callWhen(PaymentShape).returns(AmountShape),
   withdraw: M.callWhen(AmountShape).returns(PaymentShape),
   transfer: M.call(AmountArgShape, ChainAddressShape)
     .optional(IBCTransferOptionsShape)
     .returns(M.promise()),
   getAddress: M.call().returns(M.string()),
+  executeTx: M.callWhen(M.arrayOf(M.record())).returns(M.arrayOf(M.record())),
 });
 
 /** @type {{ [name: string]: [description: string, valueShape: Pattern] }} */
@@ -61,7 +61,7 @@ const PUBLIC_TOPICS = {
 };
 
 /**
- * @param {Baggage} baggage
+ * @param {Zone} zone
  * @param {MakeRecorderKit} makeRecorderKit
  * @param {ZCF} zcf
  * @param {TimerService} timerService
@@ -69,7 +69,7 @@ const PUBLIC_TOPICS = {
  * @param {AgoricChainInfo} agoricChainInfo
  */
 export const prepareLocalChainAccountKit = (
-  baggage,
+  zone,
   makeRecorderKit,
   zcf,
   timerService,
@@ -77,17 +77,19 @@ export const prepareLocalChainAccountKit = (
   agoricChainInfo,
 ) => {
   const timestampHelper = makeTimestampHelper(timerService, timerBrand);
-  const makeAccountHolderKit = prepareExoClassKit(
-    baggage,
-    'Account Holder',
+  /**
+   * Make an object wrapping an LCA with Zoe interfaces.
+   */
+  const makeLocalChainAccountKit = zone.exoClassKit(
+    'LCA Kit',
     {
-      helper: UnguardedHelperI,
       holder: HolderI,
       invitationMakers: M.interface('invitationMakers', {
-        Delegate: HolderI.payload.methodGuards.makeDelegateInvitation,
-        CloseAccount: HolderI.payload.methodGuards.makeCloseAccountInvitation,
-        TransferAccount:
-          HolderI.payload.methodGuards.makeTransferAccountInvitation,
+        Delegate: M.callWhen(M.string(), AmountShape).returns(InvitationShape),
+        Undelegate: M.callWhen(M.string(), AmountShape).returns(
+          InvitationShape,
+        ),
+        CloseAccount: M.call().returns(M.promise()),
       }),
     },
     /**
@@ -106,31 +108,37 @@ export const prepareLocalChainAccountKit = (
       return { account, address, topicKit };
     },
     {
-      helper: {
-        /** @throws if this holder no longer owns the account */
-        owned() {
-          const { account } = this.state;
-          if (!account) {
-            throw Fail`Using account holder after transfer`;
-          }
-          return account;
-        },
-        getUpdater() {
-          return this.state.topicKit.recorder;
-        },
-      },
       invitationMakers: {
-        Delegate(validatorAddress, amount) {
-          return this.facets.holder.makeDelegateInvitation(
-            validatorAddress,
-            amount,
-          );
+        /**
+         *
+         * @param {string} validatorAddress
+         * @param {Amount<'nat'>} ertpAmount
+         */
+        async Delegate(validatorAddress, ertpAmount) {
+          trace('Delegate', validatorAddress, ertpAmount);
+
+          return zcf.makeInvitation(async seat => {
+            // TODO should it allow delegating more BLD?
+            seat.exit();
+            return this.facets.holder.delegate(validatorAddress, ertpAmount);
+          }, 'Delegate');
+        },
+
+        /**
+         * @param {string} validatorAddress
+         * @param {Amount<'nat'>} ertpAmount
+         */
+        async Undelegate(validatorAddress, ertpAmount) {
+          trace('Undelegate', validatorAddress, ertpAmount);
+
+          return zcf.makeInvitation(async seat => {
+            // TODO should it allow delegating more BLD?
+            seat.exit();
+            return this.facets.holder.undelegate(validatorAddress, ertpAmount);
+          }, 'Undelegate');
         },
         CloseAccount() {
-          return this.facets.holder.makeCloseAccountInvitation();
-        },
-        TransferAccount() {
-          return this.facets.holder.makeTransferAccountInvitation();
+          throw Error('not yet implemented');
         },
       },
       holder: {
@@ -149,50 +157,73 @@ export const prepareLocalChainAccountKit = (
          * @param {string} validatorAddress
          * @param {Amount<'nat'>} ertpAmount
          */
-        async makeDelegateInvitation(validatorAddress, ertpAmount) {
-          trace('makeDelegateInvitation', validatorAddress, ertpAmount);
-
+        async delegate(validatorAddress, ertpAmount) {
           // TODO #9211 lookup denom from brand
           const amount = {
             amount: String(ertpAmount.value),
             denom: 'ubld',
           };
-
-          return zcf.makeInvitation(async seat => {
-            // TODO should it allow delegating more BLD?
-            seat.exit();
-            const lca = this.facets.helper.owned();
-            trace('lca', lca);
-            const delegatorAddress = await E(lca).getAddress();
-            trace('delegatorAddress', delegatorAddress);
-            const [result] = await E(lca).executeTx([
-              typedJson('/cosmos.staking.v1beta1.MsgDelegate', {
-                amount,
-                validatorAddress,
-                delegatorAddress,
-              }),
-            ]);
-            trace('got result', result);
-            return result;
-          }, 'Delegate');
+          const { account: lca } = this.state;
+          trace('lca', lca);
+          const delegatorAddress = await E(lca).getAddress();
+          trace('delegatorAddress', delegatorAddress);
+          const [result] = await E(lca).executeTx([
+            typedJson('/cosmos.staking.v1beta1.MsgDelegate', {
+              amount,
+              validatorAddress,
+              delegatorAddress,
+            }),
+          ]);
+          trace('got result', result);
+          return result;
         },
-        makeCloseAccountInvitation() {
-          throw Error('not yet implemented');
+        /**
+         *
+         * @param {string} validatorAddress
+         * @param {Amount<'nat'>} ertpAmount
+         * @returns {Promise<void>}
+         */
+        async undelegate(validatorAddress, ertpAmount) {
+          // TODO #9211 lookup denom from brand
+          const amount = {
+            amount: String(ertpAmount.value),
+            denom: 'ubld',
+          };
+          const { account: lca } = this.state;
+          trace('lca', lca);
+          const delegatorAddress = await E(lca).getAddress();
+          trace('delegatorAddress', delegatorAddress);
+          const [response] = await E(lca).executeTx([
+            typedJson('/cosmos.staking.v1beta1.MsgUndelegate', {
+              amount,
+              validatorAddress,
+              delegatorAddress,
+            }),
+          ]);
+          trace('undelegate response', response);
+          const { completionTime } = response;
+
+          await E(timerService).wakeAt(
+            // TODO clean up date handling once we have real data
+            dateInSeconds(new Date(completionTime)) + maxClockSkew,
+          );
         },
         /**
          * Starting a transfer revokes the account holder. The associated updater
          * will get a special notification that the account is being transferred.
          */
-        makeTransferAccountInvitation() {
-          throw Error('not yet implemented');
-        },
         /** @type {LocalChainAccount['deposit']} */
         async deposit(payment, optAmountShape) {
-          return E(this.facets.helper.owned()).deposit(payment, optAmountShape);
+          return E(this.state.account).deposit(payment, optAmountShape);
         },
         /** @type {LocalChainAccount['withdraw']} */
         async withdraw(amount) {
-          return E(this.facets.helper.owned()).withdraw(amount);
+          return E(this.state.account).withdraw(amount);
+        },
+        /** @type {LocalChainAccount['executeTx']} */
+        async executeTx(messages) {
+          // @ts-expect-error subtype
+          return E(this.state.account).executeTx(messages);
         },
         /**
          * @returns {ChainAddress['address']}
@@ -225,7 +256,7 @@ export const prepareLocalChainAccountKit = (
               ? 0n
               : await timestampHelper.getTimeoutTimestampNS());
 
-          const [result] = await E(this.facets.helper.owned()).executeTx([
+          const [result] = await E(this.state.account).executeTx([
             typedJson('/ibc.applications.transfer.v1.MsgTransfer', {
               sourcePort: transferChannel.portId,
               sourceChannel: transferChannel.channelId,
@@ -248,6 +279,6 @@ export const prepareLocalChainAccountKit = (
       },
     },
   );
-  return makeAccountHolderKit;
+  return makeLocalChainAccountKit;
 };
 /** @typedef {ReturnType<ReturnType<typeof prepareLocalChainAccountKit>>} LocalChainAccountKit */
