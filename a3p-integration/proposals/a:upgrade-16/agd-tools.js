@@ -8,7 +8,6 @@ import {
   GOV1ADDR,
   GOV2ADDR,
   GOV3ADDR,
-  newOfferId,
   CHAINID,
 } from '@agoric/synthetic-chain';
 
