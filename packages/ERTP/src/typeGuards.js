@@ -78,13 +78,12 @@ export const AmountShape = harden({
 });
 
 /**
- * To be used as a guard for an amount pattern argument, i.e., an argument which
- * is a pattern that can be used to test amounts. Since amounts are keys,
- * anywhere an amount pattern is expected, an amount can be provided and will
- * match only that concrete amount, i.e., amounts that are `keyEQ` to that
- * amount.
+ * To be used to guard an amount pattern argument, i.e., an argument which is a
+ * pattern that can be used to test amounts. Since amounts are keys, anywhere an
+ * amount pattern is expected, an amount can be provided and will match only
+ * that concrete amount, i.e., amounts that are `keyEQ` to that amount.
  *
- * The `AmountShape` guard amove is an amount pattern. But not all amount
+ * The `AmountShape` guard above is an amount pattern. But not all amount
  * patterns are like `AmountShape`. For example, `M.any()` is a valid amount
  * pattern that will admit any amount, but is does not resemble the
  * `AmountShape` pattern above.
