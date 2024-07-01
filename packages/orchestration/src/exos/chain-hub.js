@@ -1,9 +1,14 @@
 import { VowShape } from '@agoric/vow';
-import { allVows, watch } from '@agoric/vow/vat.js';
+// eslint-disable-next-line no-restricted-syntax
+import { heapVowTools } from '@agoric/vow/vat.js';
 import { makeHeapZone } from '@agoric/zone';
 import { E } from '@endo/far';
 import { M } from '@endo/patterns';
 import { CosmosChainInfoShape, IBCConnectionInfoShape } from '../typeGuards.js';
+
+// FIXME test thoroughly whether heap suffices for ChainHub
+// eslint-disable-next-line no-restricted-syntax
+const { allVows, watch } = heapVowTools;
 
 const { Fail } = assert;
 

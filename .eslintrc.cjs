@@ -32,7 +32,9 @@ const deprecatedTerminology = Object.fromEntries(
  */
 const resumable = [
   {
-    selector: 'FunctionExpression[async=true]',
+    // all async function expressions, except `onOpen` and `onClose` when they are properties of `connectionHandler`
+    selector:
+      'FunctionExpression[async=true]:not(Property[key.name="connectionHandler"] > ObjectExpression > Property[key.name=/^(onOpen|onClose)$/] > FunctionExpression[async=true])',
     message: 'Non-immediate functions must return vows, not promises',
   },
   {
@@ -43,6 +45,16 @@ const resumable = [
     selector: "Identifier[name='callWhen']",
     message:
       'callWhen wraps the function in a promise; instead immediately return a vow',
+  },
+  {
+    selector: "Identifier[name='heapVowE']",
+    message:
+      'heapVowE shortens vows to promises; instead use `E` from `@endo/far` with `watch` from durable vowTools',
+  },
+  {
+    selector: "Identifier[name='heapVowTools']",
+    message:
+      'heapVowTools are not durable; instead use `prepareVowTools` with a durable zone',
   },
 ];
 
@@ -158,8 +170,7 @@ module.exports = {
       // Modules with exports that must be resumable
       files: ['packages/orchestration/src/exos/**'],
       rules: {
-        // TODO tighten to error
-        'no-restricted-syntax': ['warn', ...resumable],
+        'no-restricted-syntax': ['error', ...resumable],
       },
     },
     {
