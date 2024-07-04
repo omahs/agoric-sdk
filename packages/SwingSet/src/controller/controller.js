@@ -212,6 +212,9 @@ export async function makeSwingsetController(
       require: kernelRequire,
       URL: globalThis.Base64, // Unavailable only on XSnap
       Base64: globalThis.Base64, // Available only on XSnap
+      process: {
+        env,
+      },
     },
   });
   const buildKernel = kernelNS.default;
