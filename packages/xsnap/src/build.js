@@ -9,6 +9,13 @@ const { freeze } = Object;
 /** @param {string} path */
 const asset = path => new URL(path, import.meta.url).pathname;
 
+/** @param {Promise<unknown>} p */
+const isRejected = p =>
+  p.then(
+    () => false,
+    () => true,
+  );
+
 /** @typedef {{ path: string, make?: string }} ModdablePlatform */
 
 const ModdableSDK = {
@@ -353,15 +360,11 @@ async function main(args, { env, stdout, spawn, fs, os }) {
     if (hasSource) {
       // Force a rebuild if for some reason the binary is out of date
       // Since the make checks may not always detect that situation
-      let force = !hasBin;
-      if (hasBin) {
-        const npm = makeCLI('npm', { spawn });
-        await npm
-          .run(['run', '-s', 'check-version'], { cwd: asset('..') })
-          .catch(() => {
-            force = true;
-          });
-      }
+      const npm = makeCLI('npm', { spawn });
+      const force = await (!hasBin ||
+        isRejected(
+          npm.run(['run', '-s', 'check-version'], { cwd: asset('..') }),
+        ));
       await buildXsnap(platform, force, { spawn, fs });
     } else if (!hasBin) {
       throw new Error(
