@@ -198,11 +198,7 @@ const showEnv = async (submodules, { spawn, stdout }) => {
 /**
  * @param {SubmoduleDescriptor[]} submodules
  * @param {{
- *   fs: {
- *     existsSync: typeof import('fs').existsSync,
- *     rmdirSync: typeof import('fs').rmdirSync,
- *     readFile: typeof import('fs').promises.readFile,
- *   },
+ *   fs: Pick<typeof import('fs'), 'existsSync' | 'rmdirSync'>,
  *   spawn: typeof import('child_process').spawn,
  * }} io
  */
@@ -234,12 +230,8 @@ const updateSubmodules = async (submodules, { fs, spawn }) => {
  * @param {ModdablePlatform} platform
  * @param {boolean} force
  * @param {{
- *   fs: {
- *     existsSync: typeof import('fs').existsSync,
- *     rmdirSync: typeof import('fs').rmdirSync,
- *     readFile: typeof import('fs').promises.readFile,
- *     writeFile: typeof import('fs').promises.writeFile,
- *   },
+ *   fs: Pick<typeof import('fs'), 'existsSync'> &
+ *     Pick<typeof import('fs').promises, 'readFile' | 'writeFile'>,
  *   spawn: typeof import('child_process').spawn,
  * }} io
  */
@@ -288,15 +280,9 @@ const buildXsnap = async (platform, force, { fs, spawn }) => {
  *   env: Record<string, string | undefined>,
  *   stdout: typeof process.stdout,
  *   spawn: typeof import('child_process').spawn,
- *   fs: {
- *     existsSync: typeof import('fs').existsSync,
- *     rmdirSync: typeof import('fs').rmdirSync,
- *     readFile: typeof import('fs').promises.readFile,
- *     writeFile: typeof import('fs').promises.writeFile,
- *   },
- *   os: {
- *     type: typeof import('os').type,
- *   }
+ *   fs: Pick<typeof import('fs'), 'existsSync' | 'rmdirSync'> &
+ *     Pick<typeof import('fs').promises, 'readFile' | 'writeFile'>,
+ *   os: Pick<typeof import('os'), 'type'>,
  * }} io
  */
 async function main(args, { env, stdout, spawn, fs, os }) {
@@ -382,10 +368,10 @@ const run = () =>
     stdout: process.stdout,
     spawn: childProcessTop.spawn,
     fs: {
-      readFile: fsTop.promises.readFile,
-      writeFile: fsTop.promises.writeFile,
       existsSync: fsTop.existsSync,
       rmdirSync: fsTop.rmdirSync,
+      readFile: fsTop.promises.readFile,
+      writeFile: fsTop.promises.writeFile,
     },
     os: {
       type: osTop.type,
