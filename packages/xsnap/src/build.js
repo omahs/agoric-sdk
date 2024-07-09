@@ -21,7 +21,7 @@ const ModdableSDK = {
 };
 
 /**
- * Adapt spawn to Promises style.
+ * Create promise-returning functions for asynchronous command execution.
  *
  * @param {string} command
  * @param {{
@@ -47,6 +47,8 @@ function makeCLI(command, { spawn }) {
 
   return freeze({
     /**
+     * Run the command, writing directly to stdin and stderr.
+     *
      * @param {string[]} args
      * @param {{ cwd?: string }} [opts]
      */
@@ -59,11 +61,16 @@ function makeCLI(command, { spawn }) {
       return wait(child);
     },
     /**
+     * Run the command, writing directly to stderr but capturing and returning
+     * stdout.
+     *
      * @param {string[]} args
-     * @param {{ cwd?: string }} [opts]
+     * @param {{ cwd?: string, fullOutput?: boolean }} [opts]
+     * @returns {Promise<string>} command output, stripped of trailing
+     *   whitespace unless option "fullOutput" is true
      */
     pipe: (args, opts) => {
-      const { cwd = '.' } = opts || {};
+      const { cwd = '.', fullOutput = false } = opts || {};
       const child = spawn(command, args, {
         cwd,
         stdio: ['inherit', 'pipe', 'inherit'],
@@ -73,7 +80,7 @@ function makeCLI(command, { spawn }) {
       child.stdout.on('data', data => {
         output += data.toString();
       });
-      return wait(child).then(() => output);
+      return wait(child).then(() => (fullOutput ? output : output.trimEnd()));
     },
   });
 }
@@ -84,28 +91,6 @@ function makeCLI(command, { spawn }) {
  * @param {{ git: ReturnType<typeof makeCLI> }} io
  */
 const makeSubmodule = (path, repoUrl, { git }) => {
-  /** @param {string} text */
-  const parseStatus = text =>
-    text
-      .split('\n')
-      // From `git submodule --help`:
-      // Show the status of the submodules. This will print the SHA-1 of the
-      // currently checked out commit for each submodule, along with the
-      // submodule path and the output of git describe for the SHA-1. Each
-      // SHA-1 will possibly be prefixed with - if the submodule is not
-      // initialized, + if the currently checked out submodule commit does
-      // not match the SHA-1 found in the index of the containing repository
-      // and U if the submodule has merge conflicts.
-      //
-      // We discovered that in other cases, the prefix is a single space.
-      .map(line => [line[0], ...line.slice(1).split(' ', 3)])
-      .map(([prefix, hash, statusPath, describe]) => ({
-        prefix,
-        hash,
-        path: statusPath,
-        describe,
-      }));
-
   return freeze({
     path,
     clone: async () => git.run(['clone', repoUrl, path]),
@@ -113,26 +98,51 @@ const makeSubmodule = (path, repoUrl, { git }) => {
     checkout: async commitHash =>
       git.run(['checkout', commitHash], { cwd: path }),
     init: async () => git.run(['submodule', 'update', '--init', '--checkout']),
-    status: async () =>
-      git.pipe(['submodule', 'status', path]).then(parseStatus),
-    /** @param {string} leaf */
+    status: async () => {
+      const line = await git.pipe(['submodule', 'status', path]);
+      // From `git submodule --help`:
+      // status [--cached] [--recursive] [--] [<path>...]
+      //     Show the status of the submodules. This will print the SHA-1 of the
+      //     currently checked out commit for each submodule, along with the
+      //     submodule path and the output of git describe for the SHA-1. Each
+      //     SHA-1 will possibly be prefixed with - if the submodule is not
+      //     initialized, + if the currently checked out submodule commit does
+      //     not match the SHA-1 found in the index of the containing repository
+      //     and U if the submodule has merge conflicts.
+      //
+      // We discovered that in other cases, the prefix is a single space.
+      const prefix = line[0];
+      const [hash, statusPath, ...describe] = line.slice(1).split(' ');
+      return {
+        prefix,
+        hash,
+        path: statusPath,
+        describe: describe.join(' '),
+      };
+    },
+    /**
+     * Read a specific configuration value for this submodule (e.g., "path" or
+     * "url") from the top-level .gitmodules.
+     *
+     * @param {string} leaf
+     */
     config: async leaf => {
       // git rev-parse --show-toplevel
-      const top = await git
-        .pipe(['rev-parse', '--show-toplevel'])
-        .then(l => l.trimEnd());
-      // assume full paths
-      const name = path.slice(top.length + 1);
-      // git config -f ../../.gitmodules --get submodule."$name".url
-      const value = await git
-        .pipe([
-          'config',
-          '-f',
-          `${top}/.gitmodules`,
-          '--get',
-          `submodule.${name}.${leaf}`,
-        ])
-        .then(l => l.trimEnd());
+      const repoRoot = await git.pipe(['rev-parse', '--show-toplevel']);
+      if (!path.startsWith(`${repoRoot}/`)) {
+        throw Error(
+          `Expected submodule path ${path} to be a subdirectory of repository ${repoRoot}`,
+        );
+      }
+      const relativePath = path.slice(repoRoot.length + 1);
+      // git config -f ../../.gitmodules --get submodule.${relativePath}.${leaf}
+      const value = await git.pipe([
+        'config',
+        '-f',
+        `${repoRoot}/.gitmodules`,
+        '--get',
+        `submodule.${relativePath}.${leaf}`,
+      ]);
       return value;
     },
   });
@@ -179,7 +189,7 @@ const updateSubmodules = async (showEnv, { env, stdout, spawn, fs }) => {
       if (!commitHash) {
         // We need to glean the commitHash and url from Git.
         const sm = makeSubmodule(path, '?', { git });
-        const [[{ hash }], url] = await Promise.all([
+        const [{ hash }, url] = await Promise.all([
           sm.status(),
           sm.config('url'),
         ]);
