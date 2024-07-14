@@ -5,11 +5,14 @@ import { eventLoopIteration } from '@agoric/internal/src/testing-utils.js';
 import { heapVowE as E } from '@agoric/vow/vat.js';
 import { prepareRecorderKitMakers } from '@agoric/zoe/src/contractSupport/recorder.js';
 import { Far } from '@endo/far';
+import { TimeMath } from '@agoric/time';
 import { prepareLocalOrchestrationAccountKit } from '../../src/exos/local-orchestration-account.js';
 import { ChainAddress } from '../../src/orchestration-api.js';
 import { makeChainHub } from '../../src/exos/chain-hub.js';
 import { NANOSECONDS_PER_SECOND } from '../../src/utils/time.js';
 import { commonSetup } from '../supports.js';
+import { UNBOND_PERIOD_SECONDS } from '../ibc-mocks.js';
+import { maxClockSkew } from '../../src/utils/cosmos.js';
 
 test('deposit, withdraw', async t => {
   const { bootstrap, brands, utils } = await commonSetup(t);
@@ -33,7 +36,7 @@ test('deposit, withdraw', async t => {
     Far('MockZCF', {}),
     timer,
     vowTools,
-    makeChainHub(bootstrap.agoricNames),
+    makeChainHub(bootstrap.agoricNames, vowTools),
   );
 
   t.log('request account from vat-localchain');
@@ -44,9 +47,9 @@ test('deposit, withdraw', async t => {
   const { holder: account } = makeLocalOrchestrationAccountKit({
     account: lca,
     address: harden({
-      address,
+      value: address,
       chainId: 'agoric-n',
-      addressEncoding: 'bech32',
+      encoding: 'bech32',
     }),
     storageNode: storage.rootNode.makeChildNode('lcaKit'),
   });
@@ -104,7 +107,7 @@ test('delegate, undelegate', async t => {
     Far('MockZCF', {}),
     timer,
     vowTools,
-    makeChainHub(bootstrap.agoricNames),
+    makeChainHub(bootstrap.agoricNames, vowTools),
   );
 
   t.log('request account from vat-localchain');
@@ -115,9 +118,9 @@ test('delegate, undelegate', async t => {
   const { holder: account } = makeLocalOrchestrationAccountKit({
     account: lca,
     address: harden({
-      address,
+      value: address,
       chainId: 'agoric-n',
-      addressEncoding: 'bech32',
+      encoding: 'bech32',
     }),
     storageNode: storage.rootNode.makeChildNode('lcaKit'),
   });
@@ -131,9 +134,20 @@ test('delegate, undelegate', async t => {
   // 2. there are no return values
   // 3. there are no side-effects such as assets being locked
   await E(account).delegate(validatorAddress, bld.units(999));
-  // TODO get the timer to fire so that this promise resolves
-  void E(account).undelegate(validatorAddress, bld.units(999));
-  t.pass();
+  const undelegateP = E(account).undelegate(validatorAddress, bld.units(999));
+  const completionTime = UNBOND_PERIOD_SECONDS + maxClockSkew;
+
+  const notTooSoon = Promise.race([
+    timer.wakeAt(completionTime - 1n).then(() => true),
+    undelegateP,
+  ]);
+  timer.advanceTo(completionTime, 'end of unbonding period');
+  t.true(await notTooSoon, "undelegate doesn't resolve before completion_time");
+  t.is(
+    await undelegateP,
+    undefined,
+    'undelegate returns void after completion_time',
+  );
 });
 
 test('transfer', async t => {
@@ -156,7 +170,7 @@ test('transfer', async t => {
     Far('MockZCF', {}),
     timer,
     vowTools,
-    makeChainHub(bootstrap.agoricNames),
+    makeChainHub(bootstrap.agoricNames, vowTools),
   );
 
   t.log('request account from vat-localchain');
@@ -167,9 +181,9 @@ test('transfer', async t => {
   const { holder: account } = makeLocalOrchestrationAccountKit({
     account: lca,
     address: harden({
-      address,
+      value: address,
       chainId: 'agoric-n',
-      addressEncoding: 'bech32',
+      encoding: 'bech32',
     }),
     storageNode: storage.rootNode.makeChildNode('lcaKit'),
   });
@@ -185,8 +199,8 @@ test('transfer', async t => {
 
   const destination: ChainAddress = {
     chainId: 'cosmoshub-4',
-    address: 'cosmos1pleab',
-    addressEncoding: 'bech32',
+    value: 'cosmos1pleab',
+    encoding: 'bech32',
   };
 
   // TODO #9211, support ERTP amounts
@@ -211,8 +225,8 @@ test('transfer', async t => {
 
   const unknownDestination: ChainAddress = {
     chainId: 'fakenet',
-    address: 'fakenet1pleab',
-    addressEncoding: 'bech32',
+    value: 'fakenet1pleab',
+    encoding: 'bech32',
   };
   await t.throwsAsync(
     () => E(account).transfer({ denom: 'ubld', value: 1n }, unknownDestination),

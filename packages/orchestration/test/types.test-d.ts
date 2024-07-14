@@ -6,6 +6,7 @@ import { typedJson } from '@agoric/cosmic-proto';
 import type { MsgDelegateResponse } from '@agoric/cosmic-proto/cosmos/staking/v1beta1/tx.js';
 import type { QueryAllBalancesResponse } from '@agoric/cosmic-proto/cosmos/bank/v1beta1/query.js';
 import type { Vow } from '@agoric/vow';
+import type { GuestAsyncFunc, HostInterface, HostOf } from '@agoric/async-flow';
 import type {
   ChainAddress,
   CosmosValidatorAddress,
@@ -14,21 +15,20 @@ import type {
 } from '../src/types.js';
 import type { LocalOrchestrationAccountKit } from '../src/exos/local-orchestration-account.js';
 import { prepareCosmosOrchestrationAccount } from '../src/exos/cosmos-orchestration-account.js';
-import type { PromiseToVow, VowifyAll } from '../src/internal.js';
 
 const anyVal = null as any;
 
 const validatorAddr = {
   chainId: 'agoric3',
-  address: 'agoric1valoperhello',
-  addressEncoding: 'bech32',
+  value: 'agoric1valoperhello',
+  encoding: 'bech32',
 } as const;
 expectType<CosmosValidatorAddress>(validatorAddr);
 
 const chainAddr = {
   chainId: 'agoric-3',
-  address: 'agoric1pleab',
-  addressEncoding: 'bech32',
+  value: 'agoric1pleab',
+  encoding: 'bech32',
 } as const;
 expectType<ChainAddress>(chainAddr);
 expectNotType<CosmosValidatorAddress>(chainAddr);
@@ -69,16 +69,16 @@ expectNotType<CosmosValidatorAddress>(chainAddr);
     anyVal,
     anyVal,
     anyVal,
-  ) satisfies VowifyAll<StakingAccountActions>;
+  ) satisfies HostInterface<StakingAccountActions>;
 }
 
-// PromiseToVow
+// HostOf
 {
   type PromiseFn = () => Promise<number>;
   type SyncFn = () => number;
 
-  type VowFn = PromiseToVow<PromiseFn>;
-  type StillSyncFn = PromiseToVow<SyncFn>;
+  type VowFn = HostOf<PromiseFn>;
+  type StillSyncFn = HostOf<SyncFn>;
 
   // Use type assertion instead of casting
   const vowFn: VowFn = (() => ({}) as Vow<number>) as VowFn;
@@ -93,9 +93,7 @@ expectNotType<CosmosValidatorAddress>(chainAddr);
 
 // PromiseToVow with TransferSteps
 {
-  type TransferStepsVow = PromiseToVow<
-    OrchestrationAccount<any>['transferSteps']
-  >;
+  type TransferStepsVow = HostOf<OrchestrationAccount<any>['transferSteps']>;
 
   const transferStepsVow: TransferStepsVow = (...args: any[]): Vow<any> =>
     ({}) as any;
@@ -110,7 +108,7 @@ expectNotType<CosmosValidatorAddress>(chainAddr);
     bizz: () => Record<string, number>;
   };
 
-  type VowObject = VowifyAll<PromiseObject>;
+  type VowObject = HostInterface<PromiseObject>;
 
   const vowObject: VowObject = {
     foo: () => ({}) as Vow<number>,

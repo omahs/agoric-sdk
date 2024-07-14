@@ -3,6 +3,11 @@ import { VowShape } from '@agoric/vow';
 import { M } from '@endo/patterns';
 
 /**
+ * @import {TypedPattern} from '@agoric/internal';
+ * @import {CosmosChainInfo} from './cosmos-api.js';
+ */
+
+/**
  * Used for IBC Channel Connections that only send outgoing transactions. If
  * your channel expects incoming transactions, please extend this interface to
  * include the `onReceive` handler.
@@ -18,9 +23,9 @@ export const OutboundConnectionHandlerI = M.interface(
 );
 
 export const ChainAddressShape = {
-  address: M.string(),
   chainId: M.string(),
-  addressEncoding: M.string(),
+  encoding: M.string(),
+  value: M.string(),
 };
 
 export const Proto3Shape = {
@@ -76,6 +81,9 @@ export const IBCConnectionInfoShape = M.splitRecord({
   transferChannel: IBCChannelInfoShape,
 });
 
+/**
+ * @type {TypedPattern<CosmosChainInfo>}
+ */
 export const CosmosChainInfoShape = M.splitRecord(
   {
     chainId: M.string(),
@@ -102,3 +110,9 @@ export const ChainFacadeI = M.interface('ChainFacade', {
   getChainInfo: M.call().returns(VowShape),
   makeAccount: M.call().returns(VowShape),
 });
+
+/**
+ * for google/protobuf/timestamp.proto, not to be confused with TimestampShape
+ * from `@agoric/time`
+ */
+export const TimestampProtoShape = { seconds: M.nat(), nanos: M.number() };

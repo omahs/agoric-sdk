@@ -1,6 +1,6 @@
 import { test as anyTest } from '@agoric/zoe/tools/prepare-test-env-ava.js';
 
-import { Fail } from '@agoric/assert';
+import { Fail } from '@endo/errors';
 import { documentStorageSchema } from '@agoric/internal/src/storage-test-utils.js';
 import type { CosmosValidatorAddress } from '@agoric/orchestration';
 import type { start as startStakeIca } from '@agoric/orchestration/src/examples/stakeIca.contract.js';
@@ -146,9 +146,9 @@ test.serial('stakeAtom - smart wallet', async t => {
   const { ATOM } = agoricNamesRemotes.brand;
   ATOM || Fail`ATOM missing from agoricNames`;
   const validatorAddress: CosmosValidatorAddress = {
-    address: 'cosmosvaloper1test',
+    value: 'cosmosvaloper1test',
     chainId: 'gaiatest',
-    addressEncoding: 'bech32',
+    encoding: 'bech32',
   };
 
   await t.notThrowsAsync(
@@ -168,9 +168,9 @@ test.serial('stakeAtom - smart wallet', async t => {
   });
 
   const validatorAddressFail: CosmosValidatorAddress = {
-    address: 'cosmosvaloper1fail',
+    value: 'cosmosvaloper1fail',
     chainId: 'gaiatest',
-    addressEncoding: 'bech32',
+    encoding: 'bech32',
   };
 
   await t.throwsAsync(
@@ -190,6 +190,11 @@ test.serial('stakeAtom - smart wallet', async t => {
     'delegate fails with invalid validator',
   );
 });
+
+test.todo('undelegate wallet offer');
+test.todo('undelegate with multiple undelegations wallet offer');
+test.todo('redelegate wallet offer');
+test.todo('withdraw reward wallet offer');
 
 // XXX rely on .serial to be in sequence, and keep this one last
 test.serial('revise chain info', async t => {
@@ -221,4 +226,69 @@ test.serial('revise chain info', async t => {
     id: 'connection-99',
     client_id: '07-tendermint-3',
   });
+});
+
+test('basic-flows', async t => {
+  const { buildProposal, evalProposal, agoricNamesRemotes, readLatest } =
+    t.context;
+
+  await evalProposal(
+    buildProposal('@agoric/builders/scripts/orchestration/init-basic-flows.js'),
+  );
+
+  const wd =
+    await t.context.walletFactoryDriver.provideSmartWallet('agoric1test');
+
+  // create a cosmos orchestration account
+  await wd.executeOffer({
+    id: 'request-coa',
+    invitationSpec: {
+      source: 'agoricContract',
+      instancePath: ['basicFlows'],
+      callPipe: [['makeOrchAccountInvitation']],
+    },
+    offerArgs: {
+      chainName: 'cosmoshub',
+    },
+    proposal: {},
+  });
+  t.like(wd.getCurrentWalletRecord(), {
+    offerToPublicSubscriberPaths: [
+      [
+        'request-coa',
+        {
+          account: 'published.basicFlows.cosmos1test',
+        },
+      ],
+    ],
+  });
+  t.like(wd.getLatestUpdateRecord(), {
+    status: { id: 'request-coa', numWantsSatisfied: 1 },
+  });
+  t.is(readLatest('published.basicFlows.cosmos1test'), '');
+
+  // create a local orchestration account
+  await wd.executeOffer({
+    id: 'request-loa',
+    invitationSpec: {
+      source: 'agoricContract',
+      instancePath: ['basicFlows'],
+      callPipe: [['makeOrchAccountInvitation']],
+    },
+    offerArgs: {
+      chainName: 'agoric',
+    },
+    proposal: {},
+  });
+
+  const publicSubscriberPaths = Object.fromEntries(
+    wd.getCurrentWalletRecord().offerToPublicSubscriberPaths,
+  );
+  t.deepEqual(publicSubscriberPaths['request-loa'], {
+    account: 'published.basicFlows.agoric1mockVlocalchainAddress',
+  });
+  t.like(wd.getLatestUpdateRecord(), {
+    status: { id: 'request-loa', numWantsSatisfied: 1 },
+  });
+  t.is(readLatest('published.basicFlows.agoric1mockVlocalchainAddress'), '');
 });

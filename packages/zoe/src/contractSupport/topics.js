@@ -7,7 +7,7 @@ export { SubscriberShape };
 export const PublicTopicShape = M.splitRecord(
   {
     subscriber: SubscriberShape,
-    storagePath: M.promise(/* string */),
+    storagePath: M.or(M.promise(/* string */), M.string()),
   },
   { description: M.string() },
 );
@@ -19,6 +19,19 @@ export const PublicTopicShape = M.splitRecord(
  *   subscriber: Subscriber<T>,
  *   storagePath: ERef<string>,
  * }} PublicTopic
+ */
+
+/**
+ * A {PublicTopic} in which the `storagePath` is always a resolved string.
+ *
+ * Useful when working with Vows and async-flow.
+ *
+ * @template {object} T topic value
+ * @typedef {{
+ *   description?: string,
+ *   subscriber: Subscriber<T>,
+ *   storagePath: string,
+ * }} ResolvedPublicTopic
  */
 
 export const TopicsRecordShape = M.recordOf(M.string(), PublicTopicShape);

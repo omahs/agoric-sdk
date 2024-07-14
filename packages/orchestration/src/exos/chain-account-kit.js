@@ -1,9 +1,9 @@
 /** @file ChainAccount exo */
-import { NonNullish } from '@agoric/assert';
-import { makeTracer } from '@agoric/internal';
-import { VowShape } from '@agoric/vow';
+import { Fail } from '@endo/errors';
 import { E } from '@endo/far';
 import { M } from '@endo/patterns';
+import { NonNullish, makeTracer } from '@agoric/internal';
+import { VowShape } from '@agoric/vow';
 import {
   ChainAddressShape,
   OutboundConnectionHandlerI,
@@ -22,7 +22,6 @@ import { makeTxPacket, parseTxPacket } from '../utils/packet.js';
  * @import {ChainAddress} from '../types.js';
  */
 
-const { Fail } = assert;
 const trace = makeTracer('ChainAccountKit');
 
 /** @typedef {'UNPARSABLE_CHAIN_ADDRESS'} UnparsableChainAddress */
@@ -189,9 +188,9 @@ export const prepareChainAccountKit = (zone, { watch, asVow }) =>
           this.state.chainAddress = harden({
             // FIXME need a fallback value like icacontroller-1-connection-1 if this fails
             // https://github.com/Agoric/agoric-sdk/issues/9066
-            address: findAddressField(remoteAddr) || UNPARSABLE_CHAIN_ADDRESS,
+            value: findAddressField(remoteAddr) || UNPARSABLE_CHAIN_ADDRESS,
             chainId: this.state.chainId,
-            addressEncoding: 'bech32',
+            encoding: 'bech32',
           });
         },
         /**

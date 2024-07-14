@@ -1,32 +1,32 @@
 import { StorageNodeShape } from '@agoric/internal';
 import { TimerServiceShape } from '@agoric/time';
-import { withdrawFromSeat } from '@agoric/zoe/src/contractSupport/zoeHelpers.js';
-import { Far } from '@endo/far';
-import { deeplyFulfilled } from '@endo/marshal';
-import { M, objectMap } from '@endo/patterns';
+import { M } from '@endo/patterns';
 import { orcUtils } from '../utils/orc.js';
-import { provideOrchestration } from '../utils/start-helper.js';
+import { withOrchestration } from '../utils/start-helper.js';
 
 /**
- * @import {Orchestrator, IcaAccount, CosmosValidatorAddress} from '../types.js'
+ * @import {GuestInterface, GuestOf} from '@agoric/async-flow';
+ * @import {LocalTransfer} from '../utils/zoe-tools.js';
+ * @import {Orchestrator, CosmosValidatorAddress} from '../types.js'
  * @import {TimerService} from '@agoric/time';
  * @import {LocalChain} from '@agoric/vats/src/localchain.js';
  * @import {Remote} from '@agoric/internal';
- * @import {OrchestrationService} from '../service.js';
- * @import {Baggage} from '@agoric/vat-data'
+ * @import {CosmosInterchainService} from '../exos/cosmos-interchain-service.js';
  * @import {NameHub} from '@agoric/vats';
+ * @import {Zone} from '@agoric/zone';
+ * @import {OrchestrationTools} from '../utils/start-helper.js';
  */
 
 /**
  * @param {Orchestrator} orch
  * @param {object} ctx
- * @param {ZCF} ctx.zcf
+ * @param {LocalTransfer} ctx.localTransfer
  * @param {ZCFSeat} seat
  * @param {object} offerArgs
  * @param {Amount<'nat'>} offerArgs.staked
  * @param {CosmosValidatorAddress} offerArgs.validator
  */
-const stackAndSwapFn = async (orch, { zcf }, seat, offerArgs) => {
+const stackAndSwapFn = async (orch, { localTransfer }, seat, offerArgs) => {
   const { give } = seat.getProposal();
 
   const omni = await orch.getChain('omniflixhub');
@@ -40,13 +40,7 @@ const stackAndSwapFn = async (orch, { zcf }, seat, offerArgs) => {
   const omniAddress = omniAccount.getAddress();
 
   // deposit funds from user seat to LocalChainAccount
-  const payments = await withdrawFromSeat(zcf, seat, give);
-  await deeplyFulfilled(
-    objectMap(payments, payment =>
-      // @ts-expect-error payment is ERef<Payment> which happens to work but isn't officially supported
-      localAccount.deposit(payment),
-    ),
-  );
+  await localTransfer(seat, localAccount, give);
   seat.exit();
 
   // build swap instructions with orcUtils library
@@ -90,40 +84,21 @@ export const makeNatAmountShape = (brand, min) =>
   harden({ brand, value: min ? M.gte(min) : M.nat() });
 
 /**
+ * Orchestration contract to be wrapped by withOrchestration for Zoe
+ *
  * @param {ZCF} zcf
  * @param {{
  *   agoricNames: Remote<NameHub>;
  *   localchain: Remote<LocalChain>;
- *   orchestrationService: Remote<OrchestrationService>;
+ *   orchestrationService: Remote<CosmosInterchainService>;
  *   storageNode: Remote<StorageNode>;
  *   timerService: Remote<TimerService>;
  *   marshaller: Marshaller;
  * }} privateArgs
- * @param {Baggage} baggage
+ * @param {Zone} zone
+ * @param {OrchestrationTools} tools
  */
-export const start = async (zcf, privateArgs, baggage) => {
-  const {
-    agoricNames,
-    localchain,
-    orchestrationService,
-    storageNode,
-    timerService,
-    marshaller,
-  } = privateArgs;
-
-  const { orchestrate } = provideOrchestration(
-    zcf,
-    baggage,
-    {
-      agoricNames,
-      localchain,
-      orchestrationService,
-      storageNode,
-      timerService,
-    },
-    marshaller,
-  );
-
+const contract = async (zcf, privateArgs, zone, { orchestrate, zoeTools }) => {
   const { brands } = zcf.getTerms();
 
   /** deprecated historical example */
@@ -133,23 +108,28 @@ export const start = async (zcf, privateArgs, baggage) => {
    *   { staked: Amount<'nat'>; validator: CosmosValidatorAddress }
    * >}
    */
-  const swapAndStakeHandler = orchestrate('LSTTia', { zcf }, stackAndSwapFn);
+  const swapAndStakeHandler = orchestrate(
+    'LSTTia',
+    { zcf, localTransfer: zoeTools.localTransfer },
+    stackAndSwapFn,
+  );
 
-  const makeSwapAndStakeInvitation = () =>
-    zcf.makeInvitation(
-      swapAndStakeHandler,
-      'Swap for TIA and stake',
-      undefined,
-      harden({
-        give: { Stable: makeNatAmountShape(brands.Stable, 1n) },
-        want: {}, // XXX ChainAccount Ownable?
-        exit: M.any(),
-      }),
-    );
-
-  const publicFacet = Far('SwapAndStake Public Facet', {
-    makeSwapAndStakeInvitation,
+  const publicFacet = zone.exo('publicFacet', undefined, {
+    makeSwapAndStakeInvitation() {
+      return zcf.makeInvitation(
+        swapAndStakeHandler,
+        'Swap for TIA and stake',
+        undefined,
+        harden({
+          give: { Stable: makeNatAmountShape(brands.Stable, 1n) },
+          want: {}, // XXX ChainAccount Ownable?
+          exit: M.any(),
+        }),
+      );
+    },
   });
 
   return harden({ publicFacet });
 };
+
+export const start = withOrchestration(contract);

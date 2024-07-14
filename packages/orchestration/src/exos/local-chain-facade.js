@@ -1,7 +1,10 @@
 /** @file ChainAccount exo */
 import { E } from '@endo/far';
+// eslint-disable-next-line no-restricted-syntax -- just the import
+import { heapVowE } from '@agoric/vow/vat.js';
 import { M } from '@endo/patterns';
 import { pickFacet } from '@agoric/vat-data';
+import { VowShape } from '@agoric/vow';
 
 import { ChainFacadeI } from '../typeGuards.js';
 
@@ -11,15 +14,15 @@ import { ChainFacadeI } from '../typeGuards.js';
  * @import {Remote} from '@agoric/internal';
  * @import {LocalChain, LocalChainAccount} from '@agoric/vats/src/localchain.js';
  * @import {Vow, VowTools} from '@agoric/vow';
- * @import {OrchestrationService} from '../service.js';
- * @import {MakeLocalOrchestrationAccountKit} from './local-orchestration-account.js';
- * @import {ChainAddress, ChainInfo, CosmosChainInfo, IBCConnectionInfo, OrchestrationAccount, PromiseToVow} from '../types.js';
+ * @import {CosmosInterchainService} from './cosmos-interchain-service.js';
+ * @import {LocalOrchestrationAccountKit, MakeLocalOrchestrationAccountKit} from './local-orchestration-account.js';
+ * @import {ChainAddress, ChainInfo, CosmosChainInfo, IBCConnectionInfo, OrchestrationAccount} from '../types.js';
  */
 
 /**
  * @typedef {{
  *   makeLocalOrchestrationAccountKit: MakeLocalOrchestrationAccountKit;
- *   orchestration: Remote<OrchestrationService>;
+ *   orchestration: Remote<CosmosInterchainService>;
  *   storageNode: Remote<StorageNode>;
  *   timer: Remote<TimerService>;
  *   localchain: Remote<LocalChain>;
@@ -36,6 +39,8 @@ const prepareLocalChainFacadeKit = (
   {
     makeLocalOrchestrationAccountKit,
     localchain,
+    // TODO vstorage design https://github.com/Agoric/agoric-sdk/issues/9066
+    // consider making an `accounts` childNode
     storageNode,
     vowTools: { allVows, watch },
   },
@@ -44,9 +49,14 @@ const prepareLocalChainFacadeKit = (
     'LocalChainFacade',
     {
       public: ChainFacadeI,
-      makeAccountWatcher: M.interface('undelegateWatcher', {
+      makeAccountWatcher: M.interface('makeAccountWatcher', {
         onFulfilled: M.call([M.remotable('LCA Account'), M.string()])
           .optional(M.arrayOf(M.undefined())) // empty context
+          .returns(VowShape),
+      }),
+      makeChildNodeWatcher: M.interface('makeChildNodeWatcher', {
+        onFulfilled: M.call(M.remotable())
+          .optional({ account: M.remotable(), address: M.string() }) // empty context
           .returns(M.remotable()),
       }),
     },
@@ -62,36 +72,49 @@ const prepareLocalChainFacadeKit = (
           return watch(this.state.localChainInfo);
         },
 
-        // FIXME parameterize on the remoteChainInfo to make()
-        // That used to work but got lost in the migration to Exo
-        /** @returns {Vow<PromiseToVow<OrchestrationAccount<ChainInfo>>>} */
+        /** @returns {Vow<LocalOrchestrationAccountKit['holder']>} */
         makeAccount() {
           const lcaP = E(localchain).makeAccount();
-          // TODO #9449 fix types
-          // @ts-expect-error Type 'Vow<Voidless>' is not assignable to type 'Vow<OrchestrationAccountI>'.
           return watch(
-            // TODO #9449 fix types
-            // @ts-expect-error Property 'getAddress' does not exist on type 'EMethods<Required<Guarded<{ getAddress()...
-            allVows([lcaP, E(lcaP).getAddress()]),
+            // XXX makeAccount returns a Promise for an exo but reserves being able to return a vow
+            // so we use heapVowE to shorten the promise path
+            // eslint-disable-next-line no-restricted-syntax -- will run in one turn
+            allVows([lcaP, heapVowE(lcaP).getAddress()]),
             this.facets.makeAccountWatcher,
           );
         },
       },
       makeAccountWatcher: {
         /**
-         * @param {[LocalChainAccount, ChainAddress['address']]} results
+         * @param {[LocalChainAccount, ChainAddress['value']]} results
          */
         onFulfilled([account, address]) {
+          return watch(
+            E(storageNode).makeChildNode(address),
+            this.facets.makeChildNodeWatcher,
+            { account, address },
+          );
+        },
+      },
+      makeChildNodeWatcher: {
+        /**
+         * @param {Remote<StorageNode>} childNode
+         * @param {{
+         *   account: LocalChainAccount;
+         *   address: ChainAddress['value'];
+         * }} ctx
+         */
+        onFulfilled(childNode, { account, address }) {
           const { localChainInfo } = this.state;
           const { holder } = makeLocalOrchestrationAccountKit({
             account,
             address: harden({
-              address,
-              addressEncoding: 'bech32',
+              value: address,
+              encoding: 'bech32',
               chainId: localChainInfo.chainId,
             }),
             // FIXME storage path https://github.com/Agoric/agoric-sdk/issues/9066
-            storageNode,
+            storageNode: childNode,
           });
           return holder;
         },

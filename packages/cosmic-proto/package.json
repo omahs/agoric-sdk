@@ -137,16 +137,11 @@
     "@endo/import-bundle": "^1.1.2",
     "ava": "^5.3.1",
     "rimraf": "^5.0.0",
-    "tsd": "^0.30.7",
+    "tsd": "^0.31.1",
     "tsimp": "^2.0.11",
-    "typescript": "^5.5.2"
+    "typescript": "^5.5.3"
   },
   "dependencies": {
-    "@cosmjs/amino": "^0.32.3",
-    "@cosmjs/math": "^0.32.3",
-    "@cosmjs/proto-signing": "^0.32.3",
-    "@cosmjs/stargate": "^0.32.3",
-    "@cosmjs/tendermint-rpc": "^0.32.3",
     "@endo/base64": "^1.0.5",
     "@endo/init": "^1.1.2"
   },

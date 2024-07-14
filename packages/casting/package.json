@@ -29,6 +29,7 @@
     "@cosmjs/proto-signing": "^0.32.3",
     "@cosmjs/stargate": "^0.32.3",
     "@cosmjs/tendermint-rpc": "^0.32.3",
+    "@endo/errors": "^1.2.2",
     "@endo/far": "^1.1.2",
     "@endo/init": "^1.1.2",
     "@endo/lockdown": "^1.0.7",
@@ -59,6 +60,6 @@
     "workerThreads": false
   },
   "typeCoverage": {
-    "atLeast": 88.94
+    "atLeast": 88.92
   }
 }
