@@ -28,6 +28,11 @@ export const chainConfig = {
     denom: 'ubld',
     expectedAddressPrefix: 'agoric',
   },
+  agoricdriver: {
+    chainId: 'agoricdriver',
+    denom: 'ubld',
+    expectedAddressPrefix: 'agoric',
+  },
 };
 
 export const chainNames = Object.keys(chainConfig);
