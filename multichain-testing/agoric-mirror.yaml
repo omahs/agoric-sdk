@@ -1,0 +1,73 @@
+chains:
+  - id: agoriclocal
+    name: agoric
+    image: ghcr.io/agoric/agoric-sdk:upgrade-16-dev
+    numValidators: 1
+    env:
+      - name: DEBUG
+        value: SwingSet:vat,SwingSet:ls
+    genesis:
+      app_state:
+        staking:
+          params:
+            unbonding_time: '2m'
+        swingset:
+          params:
+            bootstrap_vat_config: '@agoric/vm-config/decentral-itest-vaults-config.json'
+    scripts:
+      updateConfig:
+        file: scripts/update-config.sh
+    faucet:
+      enabled: false
+    ports:
+      rest: 1317
+      rpc: 26657
+      exposer: 38087
+      grpc: 9090
+    resources:
+      cpu: 1
+      memory: 4Gi
+  - id: agoriclocal2
+    name: agoric
+    image: ghcr.io/agoric/agoric-sdk:upgrade-16-dev
+    numValidators: 1
+    env:
+      - name: DEBUG
+        value: SwingSet:vat,SwingSet:ls
+    genesis:
+      app_state:
+        staking:
+          params:
+            unbonding_time: '2m'
+        swingset:
+          params:
+            bootstrap_vat_config: '@agoric/vm-config/decentral-itest-vaults-config.json'
+    scripts:
+      updateConfig:
+        file: scripts/update-config.sh
+    faucet:
+      enabled: false
+    ports:
+      rest: 2317
+      rpc: 27657
+      exposer: 39087
+      grpc: 10090
+    resources:
+      cpu: 1
+      memory: 4Gi
+
+relayers:
+  - name: agoric-agoric
+    type: hermes
+    replicas: 1
+    chains:
+      - agoriclocal
+      - agoriclocal2
+
+explorer:
+  enabled: false
+
+registry:
+  enabled: true
+  ports:
+    rest: 8081
