@@ -8,6 +8,10 @@ import { withOrchestration } from '../utils/start-helper.js';
 import { prepareChainHubAdmin } from '../exos/chain-hub-admin.js';
 import { prepareStakingTap } from './auto-stake-it-tap-kit.js';
 import { preparePortfolioHolder } from '../exos/portfolio-holder-kit.js';
+import {
+  prepareAutoStakeHolder,
+  prepareAutoStakeInvMakersFacet,
+} from './auto-stake-it-holder.js';
 
 /**
  * @import {TimerService} from '@agoric/time';
@@ -90,7 +94,7 @@ const makeAccountsHandler = async (
   assert(transferChannel.counterPartyChannelId, 'unable to find sourceChannel');
 
   // Every time the `localAccount` receives `remoteDenom` over IBC, delegate it.
-  const tap = makeStakingTap({
+  const { tap, holder } = makeStakingTap({
     localAccount,
     stakingAccount,
     validator,
@@ -102,7 +106,7 @@ const makeAccountsHandler = async (
   });
   // XXX consider storing appRegistration, so we can .revoke() or .updateTargetApp()
   // @ts-expect-error tap.receiveUpcall: 'Vow<void> | undefined' not assignable to 'Promise<any>'
-  await localAccount.monitorTransfers(tap);
+  const appRegistration = await localAccount.monitorTransfers(tap);
 
   const accountEntries = harden(
     /** @type {[string, OrchestrationAccount<any>][]} */ ([
@@ -154,6 +158,8 @@ const contract = async (
     zone.subZone('portfolio'),
     vowTools,
   );
+
+  const makeAutoStakeHolder = prepareAutoStakeHolder(zone, zcf);
 
   const makeAccounts = orchestrate(
     'makeAccounts',
