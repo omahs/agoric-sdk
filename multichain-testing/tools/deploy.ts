@@ -13,7 +13,7 @@ export const makeDeployBuilder = (
   async function deployBuilder(builder: string) {
     console.log(`building plan: ${builder}`);
     // build the plan
-    const { stdout } = await execa`agoric run ${builder}`;
+    const { stdout } = await execa`yarn agoric run ${builder}`;
     const match = stdout.match(/ (?<name>[-\w]+)-permit.json/);
     if (!(match && match.groups)) {
       throw new Error('no permit found');

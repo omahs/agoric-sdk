@@ -4,6 +4,8 @@
  */
 import { InvitationShape } from '@agoric/zoe/src/typeGuards.js';
 import { M } from '@endo/patterns';
+import { E } from '@endo/far';
+import { prepareSwingsetVowTools } from '@agoric/vow/vat.js';
 import { makeDurableZone } from '@agoric/zone/durable.js';
 
 /**
@@ -15,6 +17,7 @@ import { makeDurableZone } from '@agoric/zone/durable.js';
  * @param { {
  *   [x: PropertyKey]: any;
  *   isDriver: boolean;
+ *   evaluator: ERef<{ evaluate(code: string): import('@agoric/vow').PromiseVow<any> }>;
  *   marshaller: Marshaller;
  * }} privateArgs
  * @param {Baggage} baggage
@@ -22,31 +25,46 @@ import { makeDurableZone } from '@agoric/zone/durable.js';
 export const start = async (zcf, privateArgs, baggage) => {
   const zone = makeDurableZone(baggage);
 
-  const publicFacet = zone.exo(
-    'Mirror Public Facet',
-    M.interface('Mirror PF', {
-      makeMirrorInvitation: M.callWhen(M.boolean()).returns(InvitationShape),
+  const vowTools = prepareSwingsetVowTools(zone.subZone('vow'));
+  const { when }= vowTools;
+
+  const makeInvitationMakers = zone.exoClass(
+    'invitationMakers',
+    M.interface('Mirror Continuing Invitations', {
+      makeEvalInvitation: M.callWhen(M.string()).returns(InvitationShape),
     }),
+    (evaluator) => ({ evaluator }),
     {
-      makeMirrorInvitation(isDriver) {
-        assert.equal(isDriver, privateArgs.isDriver);
-        if (isDriver) {
-          return zcf.makeInvitation(
-            /** @type {OfferHandler} */
-            (zcfSeat) => { zcfSeat.exit() },
-            'Mirror driver'
-          );
-        }
+      makeEvalInvitation(stringToEval) {
         return zcf.makeInvitation(
-          /** @type {OfferHandler} */
-          (zcfSeat) => { zcfSeat.exit() },
-          'Mirror target',
+          async (zcfSeat) => {
+            const { evaluator } = this.state;
+            const result = await when(E(evaluator).evaluate(stringToEval));
+            console.log('evaluator replied with', result);
+            zcfSeat.exit();
+          },
+          'evaluate string'
         );
       },
-    },
-  );
+    });
 
-  return { publicFacet };
+  const creatorFacet = zone.exo(
+    'Mirror Creator Facet',
+    M.interface('Mirror CF', {
+      makeMirrorInvitation: M.callWhen().returns(InvitationShape),
+    }),
+    {
+      makeMirrorInvitation() {
+        const invitationMakers = makeInvitationMakers(privateArgs.evaluator);
+        return zcf.makeInvitation(
+          /** @type {OfferHandler} */
+          (zcfSeat) => { return harden({ invitationMakers }); },
+          'Mirror driver'
+        );
+      }
+    });
+
+  return { creatorFacet };
 };
 
 /** @typedef {typeof start} AgoricMirrorSF */

@@ -85,5 +85,9 @@
       ]
     }
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@agoric/inter-protocol": "0.17.0-u16.2",
+    "agoric": "0.22.0-u16.2"
+  }
 }

@@ -30,8 +30,7 @@ const ibc: {
   data: IBCInfo[];
 } = await fetch(`${BASE_URL}ibc`).then(r => r.json());
 
-console.log(util.inspect({data: ibc.data}, undefined, Infinity));
-process.exit(0)
+
 
 // UNTIL https://github.com/cosmology-tech/starship/issues/494
 const backmap = {
@@ -48,6 +47,9 @@ for (const ibcInfo of ibc.data) {
     c.tags.preferred = c.tags.perferred;
   }
 }
+
+// console.log(util.inspect({data: ibc.data}, undefined, Infinity));
+// process.exit(0)
 
 const chainInfo = await convertChainInfo({
   chains,
