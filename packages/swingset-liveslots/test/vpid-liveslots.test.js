@@ -898,3 +898,100 @@ test('inter-vat circular promise references', async t => {
   // });
   // t.deepEqual(log, []);
 });
+
+test('accept previously allocated promise', async t => {
+  function build(vatPowers, vatParameters) {
+    const { target } = vatParameters;
+    return Far('root', {
+      call() {
+        const promise = E(target).foo();
+        // wrap to avoid adoption
+        return { promise };
+      },
+      async watch(p) {
+        const v = await p;
+        return v;
+      },
+    });
+  }
+
+  let log;
+  let syscall;
+  let dispatch;
+
+  const kvStore = new Map();
+  ({ log, syscall } = buildSyscall({ kvStore }));
+
+  const target = 'o-1';
+  ({ dispatch } = await makeDispatch(
+    syscall,
+    build,
+    'reimport-promise',
+    {},
+    { target: kslot(target) },
+  ));
+  log.length = 0; // assume pre-build vatstore operations are correct
+
+  const root = 'o+0';
+  const callResultP = 'p-1';
+  const watchResultP = 'p-2';
+  const expectedP1 = 'p+5';
+
+  await dispatch(makeMessage(root, 'call', [], callResultP));
+
+  // The vat should send 'foo', subscribe to the result promise, and resolve with that promise
+  t.deepEqual(log.splice(0, 3), [
+    {
+      type: 'send',
+      targetSlot: target,
+      methargs: kser(['foo', []]),
+      resultSlot: expectedP1,
+    },
+    { type: 'subscribe', target: expectedP1 },
+    {
+      type: 'resolve',
+      resolutions: [[callResultP, false, kser({ promise: kslot(expectedP1) })]],
+    },
+  ]);
+  matchIDCounterSet(t, log);
+  t.deepEqual(log, []);
+
+  // snapshot the store at this point
+  const clonedStore = new Map(kvStore);
+
+  const verifyPromiseReImport = async shouldSubscribe => {
+    await dispatch(
+      makeMessage(root, 'watch', [kslot(expectedP1)], watchResultP),
+    );
+
+    // The vat will only subscribe if it was upgraded
+    if (shouldSubscribe) {
+      t.deepEqual(log.shift(), { type: 'subscribe', target: expectedP1 });
+    }
+
+    // watch will suspend until promise is resolved
+    t.deepEqual(log, []);
+
+    // On resolution propagates the value to the watch result
+    await dispatch(makeResolve(expectedP1, kser('success')));
+    t.deepEqual(log.shift(), {
+      type: 'resolve',
+      resolutions: [[watchResultP, false, kser('success')]],
+    });
+    t.deepEqual(log, []);
+  };
+
+  await verifyPromiseReImport(false);
+  ({ log, syscall } = buildSyscall({ kvStore: clonedStore }));
+  ({ dispatch } = await makeDispatch(
+    syscall,
+    build,
+    'reimport-promise-v2',
+    {},
+    {},
+  ));
+  log.length = 0;
+
+  // verify this works the same in the restarted vat
+  await verifyPromiseReImport(true);
+});
