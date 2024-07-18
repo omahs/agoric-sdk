@@ -132,5 +132,6 @@ const contract = async (zcf, _privateArgs, zone, { orchestrate, vowTools }) => {
 };
 
 export const start = withOrchestration(contract);
+harden(start);
 
 /** @typedef {typeof start} BasicFlowsSF */
