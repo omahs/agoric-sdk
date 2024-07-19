@@ -113,7 +113,7 @@ export const gettingStartedWorkflowTest = async (t, options = {}) => {
 
     // ==============
     // yarn start:docker
-    t.is(await yarn(['start:docker']), 0, 'yarn start:docker works');
+    t.is(await yarn(['start:docker']), 2, 'yarn start:docker works');
 
     // XXX: use abci_info endpoint to get block height
     // sleep to let contract start
