@@ -22,7 +22,15 @@ const makeEvaluator = (powers, additional) => {
   let compartment;
   return Far('evaluator', {
     async evaluate(code) {
-      if (!compartment) compartment = new Compartment({powers, console, E, Far, vowTools, ...additional() })
+      if (!compartment)
+        compartment = new Compartment({
+          powers,
+          console,
+          E,
+          Far,
+          vowTools,
+          ...additional(),
+        });
       return compartment.evaluate(code, { sloppyGlobalsMode: true });
     },
   });
@@ -99,28 +107,34 @@ const reserveThenDeposit = async (
  * contract and proposal files.
  *
  * @param {BootstrapPowers} powers
+ * @param root0
+ * @param root0.options
+ * @param root0.options.invitedOwners
  */
-export const startAgoricMirror = async (powers, { options: { invitedOwners } }) => {
+export const startAgoricMirror = async (
+  powers,
+  { options: { invitedOwners } },
+) => {
   console.error('@@@@ startAgoricMirror!!!');
   const {
-  consume: {
-    agoricNames,
-    board,
-    chainStorage,
-    chainTimerService,
-    localchain,
-    startUpgradable,
-    namesByAddressAdmin,
-  },
-  installation: {
-    // @ts-expect-error not a WellKnownName
-    consume: { [contractName]: installation },
-  },
-  instance: {
-    // @ts-expect-error not a WellKnownName
-    produce: { [contractName]: produceInstance },
-  },
-} = powers;
+    consume: {
+      agoricNames,
+      board,
+      chainStorage,
+      chainTimerService,
+      localchain,
+      startUpgradable,
+      namesByAddressAdmin,
+    },
+    installation: {
+      // @ts-expect-error not a WellKnownName
+      consume: { [contractName]: installation },
+    },
+    instance: {
+      // @ts-expect-error not a WellKnownName
+      produce: { [contractName]: produceInstance },
+    },
+  } = powers;
   trace(`start ${contractName}`);
   await null;
 
@@ -130,7 +144,7 @@ export const startAgoricMirror = async (powers, { options: { invitedOwners } }) 
   const privateArgs = {
     agoricNames: await agoricNames,
     localchain: await localchain,
-    evaluator: makeEvaluator(powers, () => ({privateArgs})),
+    evaluator: makeEvaluator(powers, () => ({ privateArgs })),
     isDriver: true,
     storageNode,
     marshaller,
@@ -147,22 +161,22 @@ export const startAgoricMirror = async (powers, { options: { invitedOwners } }) 
 
   const { instance, creatorFacet } = await E(startUpgradable)(startOpts);
   produceInstance.resolve(instance);
-    /** @param {[string, Promise<Invitation>][]} addrInvitations */
-    const distributeInvitations = async addrInvitations => {
-      await Promise.all(
-        addrInvitations.map(async ([addr, invitationP]) => {
-          const debugName = `audit member ${addr}`;
-          await reserveThenDeposit(debugName, namesByAddressAdmin, addr, [
-            invitationP,
-          ]).catch(err => console.error(`failed deposit to ${debugName}`, err));
-        }),
-      );
-    };
-    const invitations = Object.keys(invitedOwners).map(name => {
-      console.log('creating invitation for', name);
-      return E(creatorFacet).makeMirrorInvitation();
-    });
-    void distributeInvitations(zip(Object.values(invitedOwners), invitations));
+  /** @param {[string, Promise<Invitation>][]} addrInvitations */
+  const distributeInvitations = async addrInvitations => {
+    await Promise.all(
+      addrInvitations.map(async ([addr, invitationP]) => {
+        const debugName = `audit member ${addr}`;
+        await reserveThenDeposit(debugName, namesByAddressAdmin, addr, [
+          invitationP,
+        ]).catch(err => console.error(`failed deposit to ${debugName}`, err));
+      }),
+    );
+  };
+  const invitations = Object.keys(invitedOwners).map(name => {
+    console.log('creating invitation for', name);
+    return E(creatorFacet).makeMirrorInvitation();
+  });
+  void distributeInvitations(zip(Object.values(invitedOwners), invitations));
 };
 harden(startAgoricMirror);
 

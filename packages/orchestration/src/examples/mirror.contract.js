@@ -10,14 +10,16 @@ import { makeDurableZone } from '@agoric/zone/durable.js';
 
 /**
  * @import {Baggage} from '@agoric/vat-data';
- **/
+ */
 
 /**
  * @param {ZCF} zcf
- * @param { {
+ * @param {{
  *   [x: PropertyKey]: any;
  *   isDriver: boolean;
- *   evaluator: ERef<{ evaluate(code: string): import('@agoric/vow').PromiseVow<any> }>;
+ *   evaluator: ERef<{
+ *     evaluate(code: string): import('@agoric/vow').PromiseVow<any>;
+ *   }>;
  *   marshaller: Marshaller;
  * }} privateArgs
  * @param {Baggage} baggage
@@ -26,43 +28,25 @@ export const start = async (zcf, privateArgs, baggage) => {
   const zone = makeDurableZone(baggage);
 
   const vowTools = prepareSwingsetVowTools(zone.subZone('vow'));
-  const { when }= vowTools;
-
-  const makeInvitationMakers = zone.exoClass(
-    'invitationMakers',
-    M.interface('Mirror Continuing Invitations', {
-      makeEvalInvitation: M.callWhen(M.string()).returns(InvitationShape),
-    }),
-    (evaluator) => ({ evaluator }),
-    {
-      makeEvalInvitation(stringToEval) {
-        return zcf.makeInvitation(
-          async (zcfSeat) => {
-            const { evaluator } = this.state;
-            const result = await when(E(evaluator).evaluate(stringToEval));
-            console.log('evaluator replied with', result);
-            zcfSeat.exit();
-          },
-          'evaluate string'
-        );
-      },
-    });
+  const { when } = vowTools;
 
   const creatorFacet = zone.exo(
     'Mirror Creator Facet',
     M.interface('Mirror CF', {
-      makeMirrorInvitation: M.callWhen().returns(InvitationShape),
+      makeEvalInvitation: M.callWhen().returns(InvitationShape),
     }),
     {
-      makeMirrorInvitation() {
-        const invitationMakers = makeInvitationMakers(privateArgs.evaluator);
-        return zcf.makeInvitation(
-          /** @type {OfferHandler} */
-          (zcfSeat) => { return harden({ invitationMakers }); },
-          'Mirror driver'
-        );
-      }
-    });
+      makeEvalInvitation(stringToEval) {
+        return zcf.makeInvitation(async zcfSeat => {
+          const { evaluator } = privateArgs;
+          console.log('evaluating', stringToEval);
+          const result = await when(E(evaluator).evaluate(stringToEval));
+          console.log('evaluator replied with', result);
+          zcfSeat.exit();
+        }, 'evaluate string');
+      },
+    },
+  );
 
   return { creatorFacet };
 };

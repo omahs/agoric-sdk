@@ -61,6 +61,11 @@ const makeVaultProposal = ({ brand }, opts) => {
   return harden(proposal);
 };
 
+const makeMirrorProposal = (_args, _opts) => {
+  const proposal = { give: {}, want: {} };
+  return harden(proposal);
+};
+
 /**
  * @param {Pick<
  *   import('@agoric/vats/tools/board-utils.js').AgoricNamesRemotes,
@@ -92,6 +97,34 @@ const makeOpenOffer = ({ brand }, opts) => {
         ['getCollateralManager', [collateralBrand]],
         ['makeVaultInvitation'],
       ],
+    },
+    proposal,
+  };
+};
+
+/**
+ * @param {Pick<
+ *   import('@agoric/vats/tools/board-utils.js').AgoricNamesRemotes,
+ *   'brand'
+ * >} agoricNames
+ * @param {{
+ *   offerId: string;
+ *   stringToEval: string;
+ * }} opts
+ * @returns {import('@agoric/smart-wallet/src/offers.js').OfferSpec}
+ */
+const makeEvalOffer = (agoricNames, opts) => {
+  // NB: not really a Proposal because the brands are not remotes
+  // Instead they're copyRecord like  "{"boardId":"board0257","iface":"Alleged: IST brand"}" to pass through the boardId
+  // mustMatch(harden(proposal), ProposalShape);
+  const proposal = makeMirrorProposal(agoricNames, opts);
+
+  return {
+    id: opts.offerId,
+    invitationSpec: {
+      source: 'agoricContract',
+      instancePath: ['agoricMirror'],
+      callPipe: [['makeMirrorInvitation', [opts.stringToEval]]],
     },
     proposal,
   };
@@ -438,6 +471,9 @@ export const Offers = {
   },
   fluxAggregator: {
     PushPrice: makePushPriceOffer,
+  },
+  evaluators: {
+    Eval: makeEvalOffer,
   },
   psm: {
     // lowercase because it's not an invitation name. Instead it's an abstraction over two invitation makers.
