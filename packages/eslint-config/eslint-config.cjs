@@ -112,6 +112,10 @@ module.exports = {
       files: ['**/*.contract.js'],
       rules: {
         '@endo/harden-exports': 'error',
+        '@typescript-eslint/exports-satisfy': [
+          'error',
+          { start: 'ContractStartFunction' },
+        ],
       },
     },
     {
