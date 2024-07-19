@@ -10,6 +10,7 @@
 // eslint-disable-next-line no-restricted-syntax -- intentional for test
 import { E } from '@endo/far';
 
+// eslint-disable-next-line @typescript-eslint/exports-satisfy -- intentional for test
 export function notFlow() {
   console.log('This function is not a flow');
 }
@@ -20,6 +21,7 @@ export async function notHardened() {
   console.log('This function is the most minimal flow, but it’s not hardened');
 }
 
+// eslint-disable-next-line @typescript-eslint/exports-satisfy -- intentional for test
 export async function usesE(orch, { someEref }) {
   // eslint-disable-next-line no-restricted-syntax -- intentional for test
   await E(someEref).foo();

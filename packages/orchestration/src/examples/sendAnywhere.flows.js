@@ -22,7 +22,7 @@ const { entries } = Object;
  * @param {ZCFSeat} seat
  * @param {{ chainName: string; destAddr: string }} offerArgs
  */
-export async function sendIt(
+export const sendIt = async(
   orch,
   { contractState, localTransfer, findBrandInVBank },
   seat,

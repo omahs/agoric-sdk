@@ -124,6 +124,10 @@ module.exports = {
       rules: {
         'no-restricted-syntax': ['error', ...orchestrationFlowRestrictions],
         '@endo/harden-exports': 'error',
+        '@typescript-eslint/exports-satisfy': [
+          'error',
+          { '*': 'OrchestrationFlow' },
+        ],
       },
     },
   ],
